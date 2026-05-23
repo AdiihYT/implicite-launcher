@@ -1,6 +1,8 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('launcher', {
+  platform: process.platform,
+
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
 
@@ -10,6 +12,10 @@ contextBridge.exposeInMainWorld('launcher', {
 
   openDebugLog: () => ipcRenderer.invoke('open-debug-log'),
   openAppDir: () => ipcRenderer.invoke('open-app-dir'),
+
+  // Window controls (frameless platformok)
+  windowMinimize: () => ipcRenderer.invoke('window-minimize'),
+  windowClose:    () => ipcRenderer.invoke('window-close'),
 
   // Auto-updater
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),

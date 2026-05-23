@@ -11,37 +11,15 @@
 
 const fs = require('fs');
 const path = require('path');
-const { spawnSync } = require('child_process');
 const { downloadFile } = require('./downloader');
 const logger = require('./logger');
+const zip = require('./zip');
 
 const FORGE_VERSION = '1.8.9-11.15.1.2318-1.8.9';
 const FORGE_INSTALLER_URL =
   `https://maven.minecraftforge.net/net/minecraftforge/forge/${FORGE_VERSION}/forge-${FORGE_VERSION}-installer.jar`;
 
-function unzipRead(jarPath, entryName) {
-  const res = spawnSync('unzip', ['-p', jarPath, entryName], {
-    encoding: null,
-    maxBuffer: 512 * 1024 * 1024,
-  });
-  if (res.error) {
-    throw new Error(`unzip -p hiba (${entryName}): ${res.error.message}`);
-  }
-  if (res.status !== 0) {
-    throw new Error(`unzip -p hiba (${entryName}): exit=${res.status}, ${res.stderr?.toString() || 'unknown'}`);
-  }
-  return res.stdout;
-}
-
-function unzipReadJson(jarPath, entryName) {
-  return JSON.parse(unzipRead(jarPath, entryName).toString('utf8'));
-}
-
-function unzipExtractToFile(jarPath, entryName, destPath) {
-  fs.mkdirSync(path.dirname(destPath), { recursive: true });
-  const buf = unzipRead(jarPath, entryName);
-  fs.writeFileSync(destPath, buf);
-}
+// (ZIP-műveletek cross-platform módon a `./zip` modulban — adm-zip alapon.)
 
 async function ensureForgeInstaller(cacheDir, onStatus) {
   fs.mkdirSync(cacheDir, { recursive: true });
@@ -65,7 +43,7 @@ async function ensureForgeInstaller(cacheDir, onStatus) {
  * }}
  */
 function readForgeProfile(installerPath) {
-  const profile = unzipReadJson(installerPath, 'install_profile.json');
+  const profile = zip.readEntryJson(installerPath, 'install_profile.json');
 
   if (!profile.versionInfo) {
     throw new Error('install_profile.json: hiányzik a versionInfo (nem klasszikus Forge formátum?)');
@@ -97,7 +75,7 @@ function readForgeProfile(installerPath) {
 async function extractForgeUniversal(installerPath, librariesDir, universalEntryName, universalMavenPath) {
   const dest = path.join(librariesDir, universalMavenPath);
   if (fs.existsSync(dest) && fs.statSync(dest).size > 0) return dest;
-  unzipExtractToFile(installerPath, universalEntryName, dest);
+  zip.extractEntry(installerPath, universalEntryName, dest);
   return dest;
 }
 

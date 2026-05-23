@@ -44,7 +44,7 @@ body {
   background-attachment: fixed;
 }
 
-/* ---------- Native macOS titlebar drag region ---------- */
+/* ---------- Titlebar drag region (cross-platform) ---------- */
 .titlebar {
   position: fixed;
   top: 0;
@@ -53,8 +53,44 @@ body {
   height: 36px;
   -webkit-app-region: drag;
   z-index: 100;
-  pointer-events: none;
 }
+
+/* ---------- Custom window controls (Windows/Linux only) ---------- */
+.win-controls {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: none;          /* default: rejtett; a body.platform-* kapcsolja */
+  height: 100%;
+  -webkit-app-region: no-drag;
+}
+body.platform-win32 .win-controls,
+body.platform-linux .win-controls {
+  display: flex;
+}
+.win-btn {
+  width: 46px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+  -webkit-app-region: no-drag;
+}
+.win-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+.win-btn-close:hover {
+  background: #E81123;
+  color: #fff;
+}
+.win-btn:active { background: rgba(255, 255, 255, 0.04); }
+.win-btn-close:active { background: #B40E1B; }
 
 /* ---------- Screen container ---------- */
 .screen {
@@ -184,7 +220,8 @@ input[type="number"]:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 36px 28px 16px 92px; /* left padding leaves room for traffic lights */
+  /* default (Mac): bal-pad a traffic lights miatt */
+  padding: 36px 28px 16px 92px;
   border-bottom: 1px solid rgba(30, 42, 66, 0.6);
   background: rgba(5, 8, 17, 0.55);
   backdrop-filter: blur(18px) saturate(140%);
@@ -596,4 +633,11 @@ input[type="number"]:focus {
 @keyframes advanced-in {
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Platform-specifikus topbar padding ---------- */
+/* Win/Linux: bal oldalon nincs traffic light → jobb oldalra kell hely a saját win-controls-nak */
+body.platform-win32 .topbar,
+body.platform-linux .topbar {
+  padding: 36px 110px 16px 28px;
 }

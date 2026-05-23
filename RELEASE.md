@@ -1,6 +1,13 @@
 # Release & Auto-Update útmutató
 
-A launcher `electron-updater`-rel auto-frissít **GitHub Releases**-ről. Egy `npm run release` parancs buildel + feltölt mindent a `AdiihYT/implicite-launcher` repó Release-eibe, és a már telepített launcher-ek a következő indításnál maguktól észreveszik.
+A launcher `electron-updater`-rel auto-frissít **GitHub Releases**-ről, **macOS-en és Windows-on egyaránt**. Egy `npm run release` parancs mindkét platformra buildel és feltölt mindent a `AdiihYT/implicite-launcher` repó Release-eibe, és a már telepített launcher-ek (mindkét platformon) a következő indításnál maguktól észreveszik.
+
+## Platformok
+
+| Platform | Telepítő | Auto-update | Code signing |
+|---|---|---|---|
+| **macOS** (Universal arm64+x64) | `.dmg` | `electron-updater` + Squirrel.Mac (`SQRLDisableCodeSigningVerification`-vel megkerülve) | Nincs (Gatekeeper warning első indításkor) |
+| **Windows** (x64, Win 10/11) | NSIS `.exe` installer | `electron-updater` + NSIS | Nincs (SmartScreen warning első indításkor) |
 
 ---
 
@@ -56,13 +63,26 @@ git push --follow-tags
 ```
 
 Az `npm run release` lefutása:
-1. `electron-builder` lefut, és elkészíti a `dist/`-ben a `.dmg`, `.zip`, `latest-mac.yml` fájlokat (universal arm64+x64)
+1. `electron-builder` lefut **mindkét platformra** (Mac + Windows), és elkészíti a `dist/`-ben:
+   - **macOS**: `.dmg`, `.zip` (universal arm64+x64), `latest-mac.yml`
+   - **Windows**: `.exe` (NSIS x64 installer), `latest.yml`
 2. Felcsatlakozik a GitHub API-ra a `GH_TOKEN`-nel
-3. Létrehoz egy új Release-t a repóban `v1.0.4` névvel (a verziószám a `package.json`-ból jön)
-4. Feltölti mind a 3 fájlt mint Release Asset
+3. Létrehoz egy új Release-t a repóban `v1.0.X` névvel (a verziószám a `package.json`-ból jön)
+4. Feltölti az összes file-t mint Release Asset (Mac + Win egyazon release-ben)
 5. Publikálja a release-t (alapból nem draft)
 
-Idő: ~2-5 perc lassú netnél (170 MB feltöltés a GitHub-ra, ami sokkal gyorsabb mint pl. SSH-n keresztül a saját CDN-re).
+Idő: ~5-10 perc (kb. 170 MB Mac + ~120 MB Win feltöltés).
+
+### Csak az egyik platformra buildelsz?
+
+```bash
+npm run release:mac   # csak Mac (.dmg + .zip + latest-mac.yml)
+npm run release:win   # csak Windows (.exe + latest.yml)
+```
+
+### Build Windows-ra Mac-ről
+
+Az `electron-builder` macOS-en is le tudja gyártani a Windows `.exe`-t (NSIS-szel). **Wine-ra nincs szükség**, mert nem signzünk. Első futáskor `electron-builder` letölti az NSIS belső package-eit (~50 MB, cache-elve).
 
 ---
 
@@ -80,16 +100,25 @@ A folyamat ugyanaz mint korábban, csak GitHub a forrás:
 
 ## 4. Első telepítés új gépekre
 
-A GitHub Release oldalon a `.dmg` fájl publikus letöltési linket kap, pl.:
+A GitHub Release oldalon mind a Mac (`.dmg`) mind a Windows (`.exe`) fájl publikus letöltési linket kap:
 ```
 https://github.com/AdiihYT/implicite-launcher/releases/latest
 ```
 
-Ezt küldd az új játékosoknak. Ők:
-1. Letöltik a `.dmg`-t
+### macOS
+
+1. Letöltik a `.dmg`-t (`Implicite-Launcher-X.Y.Z-universal.dmg`)
 2. Átdrag-elik az `Applications/` mappába
 3. Első indításnál: jobb klikk → Megnyitás (Gatekeeper warning, egyszeri, mert nincs code signing)
 4. Innentől az auto-updater intézi a frissítéseket
+
+### Windows
+
+1. Letöltik az `.exe`-t (`Implicite-Launcher-X.Y.Z-x64.exe`)
+2. Dupla-kattintás → **SmartScreen warning**: "Windows protected your PC" → **More info** link → **Run anyway** gomb (egyszeri, mert nincs code signing)
+3. NSIS wizard: telepítési hely választás (alapból `%LOCALAPPDATA%\Programs\Implicite Launcher`) → Install
+4. Indítható a Start menüből vagy az asztali shortcut-ról
+5. Innentől az auto-updater intézi a frissítéseket (`%APPDATA%\Implicite\` mappába cache-elve)
 
 ---
 
@@ -131,6 +160,12 @@ Fine-grained token van, de a Repository access vagy a Permissions nincs jól. Ge
 
 ### `Error: Cannot find module 'electron-updater'`
 Csak akkor fordulhat elő ha valaki manuálisan nyúlt a `node_modules`-be. `npm install`.
+
+### Windows-on `SmartScreen` warning első indításkor
+Várható unsigned build-nél. A felhasználó: **More info → Run anyway**. Egyszeri, a Windows ezután "ismerős" appként kezeli. Hosszú távú megoldás: EV code-signing cert ($300+/év).
+
+### Windows-on auto-update nem indul el
+`autoInstallOnAppQuit: true` van beállítva — a frissítés a launcher kilépésekor települ, **következő** indításnál jön az új verzió. Ha a játékos azonnal akarja: a Settings → Frissítések szekcióban az **Újraindítás most** gomb. A NSIS-alapú Windows updater nem igényel külön `SQRLDisable...` flag-et (csak Mac-Squirrel-specifikus).
 
 ### A frissítés letöltődik, de `Auto-frissítés sikertelen`
 Várható unsigned build-nél olykor. A fallback "Letöltés kézzel" gomb → GitHub release oldal. Hosszú távon: Apple Developer Program.

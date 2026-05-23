@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, Menu, shell } = require('electron');
 const path = require('path');
+const { spawn } = require('child_process');
 const logger = require('./src/logger');
 
 let mainWindow = null;
@@ -88,13 +89,19 @@ function blockShortcuts(win) {
 }
 
 function createWindow() {
+  const isMac = process.platform === 'darwin';
+  // Mac: hiddenInset + traffic light pozíció (a renderer .topbar bal-pad-elve).
+  // Win/Linux: teljesen frameless, saját min/close gomb a renderer-ben.
+  const chrome = isMac
+    ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 16, y: 12 } }
+    : { frame: false };
+
   mainWindow = new BrowserWindow({
     width: 1100,
     height: 680,
     resizable: false,
     backgroundColor: '#050811',
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 16, y: 12 },
+    ...chrome,
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -218,6 +225,11 @@ function registerIpc() {
   ipcMain.handle('open-debug-log', () => shell.openPath(logger.LOG_FILE));
   ipcMain.handle('open-app-dir', () => shell.openPath(logger.APP_DIR));
 
+  // Window controls — a frameless platformokon (Win/Linux) a renderer
+  // saját min/close gombokat rajzol; ezek hívják ezeket az IPC-ket.
+  ipcMain.handle('window-minimize', () => mainWindow?.minimize());
+  ipcMain.handle('window-close',    () => mainWindow?.close());
+
   ipcMain.handle('get-app-version', () => app.getVersion());
   ipcMain.handle('get-update-status', () => latestUpdateState);
   ipcMain.handle('install-update', () => {
@@ -236,11 +248,21 @@ function registerIpc() {
 
   ipcMain.handle('force-kill', () => {
     if (!mcProcess || mcProcess.killed) return { success: true };
-    logger.warn(`GAME: kényszerleállítás (SIGKILL) – PID=${mcProcess.pid}`);
-    try {
-      process.kill(-mcProcess.pid, 'SIGKILL');
-    } catch {
-      try { mcProcess.kill('SIGKILL'); } catch {}
+    logger.warn(`GAME: kényszerleállítás – PID=${mcProcess.pid}`);
+    if (process.platform === 'win32') {
+      // Windows-on nincs process group; taskkill /T levágja a child-okat is.
+      try {
+        spawn('taskkill', ['/pid', String(mcProcess.pid), '/T', '/F'], { stdio: 'ignore' });
+      } catch {
+        try { mcProcess.kill('SIGKILL'); } catch {}
+      }
+    } else {
+      // Unix: negatív PID = process group kill (Java natív szálait is leveszi).
+      try {
+        process.kill(-mcProcess.pid, 'SIGKILL');
+      } catch {
+        try { mcProcess.kill('SIGKILL'); } catch {}
+      }
     }
     return { success: true };
   });

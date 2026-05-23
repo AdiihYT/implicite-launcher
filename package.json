@@ -6,7 +6,10 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --mac",
-    "release": "electron-builder --mac --publish always"
+    "build:win": "electron-builder --win",
+    "release": "electron-builder --mac --win --publish always",
+    "release:mac": "electron-builder --mac --publish always",
+    "release:win": "electron-builder --win --publish always"
   },
   "build": {
     "appId": "com.implicite.launcher",
@@ -30,6 +33,23 @@
         "SQRLDisableCodeSigningVerification": true
       }
     },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": "x64"
+        }
+      ],
+      "artifactName": "${productName}-${version}-x64.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Implicite Launcher"
+    },
     "publish": {
       "provider": "github",
       "owner": "AdiihYT",
@@ -49,6 +69,7 @@
     "electron-builder": "^24.0.0"
   },
   "dependencies": {
+    "adm-zip": "^0.5.17",
     "electron-updater": "^6.8.3"
   }
 }

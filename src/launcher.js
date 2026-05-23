@@ -9,6 +9,7 @@ const { fetchJSON, downloadFile, downloadConcurrent } = require('./downloader');
 const lwjgl = require('./lwjgl');
 const forge = require('./forge');
 const defaults = require('./defaults');
+const zip = require('./zip');
 
 // ----- útvonalak ---------------------------------------------------
 const APP_DIR     = logger.APP_DIR;
@@ -134,12 +135,16 @@ function shouldIncludeLibrary(lib) {
 
 // ----- Java 8 telepítés (Azul Zulu) --------------------------------
 // Az Adoptium nem ad ki Java 8-at macOS arm64-re. A Zulu igen (natívan),
-// és x64-re is. A struktúra Zulu-nál: <top>/zulu-8.jre/Contents/Home/bin/java
+// és x64-re Mac-en + Windows x64-en is.
+// Zulu struktúra Mac-en: <top>/zulu-8.jre/Contents/Home/bin/java
+// Zulu struktúra Win-en: <top>/zulu-8...-win_x64/bin/java.exe
 function findJavaBinary(dir, depth = 0) {
   if (!fs.existsSync(dir) || depth > 5) return null;
-  const direct = path.join(dir, 'bin', 'java');
+  const javaName = process.platform === 'win32' ? 'java.exe' : 'java';
+  const direct = path.join(dir, 'bin', javaName);
   if (fs.existsSync(direct)) return direct;
-  const homeBin = path.join(dir, 'Contents', 'Home', 'bin', 'java');
+  // macOS bundle layout
+  const homeBin = path.join(dir, 'Contents', 'Home', 'bin', javaName);
   if (fs.existsSync(homeBin)) return homeBin;
 
   let entries;
@@ -162,10 +167,18 @@ async function ensureJava8(onStatus, onProgress) {
     return existing;
   }
 
-  const arch = process.arch === 'arm64' ? 'aarch64' : 'x64';
+  // Platform-specifikus Zulu paraméterek
+  const isWin = process.platform === 'win32';
+  const isMac = process.platform === 'darwin';
+  const arch = isWin
+    ? 'x64'
+    : (process.arch === 'arm64' ? 'aarch64' : 'x64');
+  const zuluOs = isWin ? 'windows' : (isMac ? 'macos' : 'linux');
+  const archiveType = isWin ? 'zip' : 'tar.gz';
+
   const apiUrl = `https://api.azul.com/metadata/v1/zulu/packages/`
-    + `?java_version=8&os=macos&arch=${arch}`
-    + `&archive_type=tar.gz&java_package_type=jre&javafx_bundled=false`
+    + `?java_version=8&os=${zuluOs}&arch=${arch}`
+    + `&archive_type=${archiveType}&java_package_type=jre&javafx_bundled=false`
     + `&latest=true&release_status=ga`;
 
   onStatus?.('Java előkészítése...');
@@ -178,19 +191,27 @@ async function ensureJava8(onStatus, onProgress) {
   if (!pkg?.download_url) throw new Error('Azul Zulu API: hiányzó download_url');
   logger.info(`JAVA: package – ${pkg.name}`);
 
-  const tarPath = path.join(CACHE_DIR, `jre8-${arch}.tar.gz`);
+  const archivePath = path.join(CACHE_DIR, `jre8-${arch}.${archiveType}`);
   onStatus?.('Java letöltése...');
-  await downloadFile(pkg.download_url, tarPath, (p) => onProgress?.('Java letöltése', p));
+  await downloadFile(pkg.download_url, archivePath, (p) => onProgress?.('Java letöltése', p));
 
   onStatus?.('Java telepítése...');
-  const res = spawnSync('tar', ['-xzf', tarPath, '-C', JAVA_DIR], { stdio: 'ignore' });
-  if (res.status !== 0) throw new Error('Java 8 kibontás sikertelen (tar exit ' + res.status + ')');
+  if (isWin) {
+    try {
+      zip.extractAll(archivePath, JAVA_DIR);
+    } catch (e) {
+      throw new Error('Java 8 kibontás sikertelen: ' + e.message);
+    }
+  } else {
+    const res = spawnSync('tar', ['-xzf', archivePath, '-C', JAVA_DIR], { stdio: 'ignore' });
+    if (res.status !== 0) throw new Error('Java 8 kibontás sikertelen (tar exit ' + res.status + ')');
+  }
 
-  try { fs.unlinkSync(tarPath); } catch {}
+  try { fs.unlinkSync(archivePath); } catch {}
 
   const javaPath = findJavaBinary(JAVA_DIR);
   if (!javaPath) throw new Error('Java 8 kibontva, de a java binary nem található.');
-  try { fs.chmodSync(javaPath, 0o755); } catch {}
+  if (!isWin) { try { fs.chmodSync(javaPath, 0o755); } catch {} }
   logger.info(`JAVA: telepítve – ${javaPath}`);
   return javaPath;
 }
@@ -276,8 +297,13 @@ async function ensureNativeJar(lib) {
 }
 
 function extractNativesJar(jarPath) {
-  const res = spawnSync('unzip', ['-oq', jarPath, '-d', NATIVES_DIR, '-x', 'META-INF/*', '-x', 'module-info.class'], { stdio: 'ignore' });
-  if (res.status !== 0) throw new Error(`natives kibontás sikertelen: ${path.basename(jarPath)}`);
+  try {
+    zip.extractAll(jarPath, NATIVES_DIR, {
+      exclude: ['META-INF/*', 'module-info.class'],
+    });
+  } catch (e) {
+    throw new Error(`natives kibontás sikertelen: ${path.basename(jarPath)} – ${e.message}`);
+  }
 }
 
 // ----- asset index + objects ---------------------------------------
@@ -355,19 +381,15 @@ function ensureVboOptionForMacArm64() {
 // AppKit setStyleMask: NSException sose dobódik macOS Tahoe-n. A class
 // file mérete változatlan; idempotent.
 function patchTanmayLwjglSetResizable(jarPath) {
-  const tmpDir = path.join(CACHE_DIR, 'lwjgl-patch');
-  try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch {}
-  fs.mkdirSync(tmpDir, { recursive: true });
-
   const classRel = 'org/lwjgl/opengl/MacOSXDisplay.class';
-  let res = spawnSync('unzip', ['-o', '-q', jarPath, classRel, '-d', tmpDir]);
-  if (res.status !== 0) {
-    throw new Error(`unzip MacOSXDisplay.class hibás: ${res.stderr?.toString() || 'unknown'}`);
-  }
-  const fullPath = path.join(tmpDir, classRel);
-  if (!fs.existsSync(fullPath)) throw new Error('MacOSXDisplay.class nem található a JAR-ban');
 
-  const buf = fs.readFileSync(fullPath);
+  let buf;
+  try {
+    buf = zip.readEntryBuffer(jarPath, classRel);
+  } catch (e) {
+    throw new Error(`MacOSXDisplay.class nem olvasható: ${e.message}`);
+  }
+
   const ORIG = [0x2a, 0x2a, 0xb4, null, null, 0x1b, 0xb7, null, null, 0xb1];
   const PATCHED = [0xb1, 0x2a, 0xb4, null, null, 0x1b, 0xb7, null, null, 0xb1];
 
@@ -392,13 +414,7 @@ function patchTanmayLwjglSetResizable(jarPath) {
   }
 
   buf[offset] = 0xb1;
-  fs.writeFileSync(fullPath, buf);
-
-  // Beemeli a patched class-t a JAR-ba (replace ha létezik)
-  res = spawnSync('zip', ['-q', jarPath, classRel], { cwd: tmpDir });
-  if (res.status !== 0) {
-    throw new Error(`zip patch hibás: ${res.stderr?.toString() || 'unknown'}`);
-  }
+  zip.addOrReplaceEntry(jarPath, classRel, buf);
 
   logger.info(`LWJGL: setResizable bytecode patchelve (offset 0x${offset.toString(16)})`);
 }
@@ -709,7 +725,7 @@ async function launch({ username, ram, onStatus, onProgress }) {
     '${natives_directory}':  NATIVES_DIR,
     '${launcher_name}':      'Implicite',
     '${launcher_version}':   '1.0.0',
-    '${classpath}':          classpath.join(':'),
+    '${classpath}':          classpath.join(path.delimiter),
   };
 
   // 1.8.9 = legacy `minecraftArguments` string
@@ -741,7 +757,7 @@ async function launch({ username, ram, onStatus, onProgress }) {
     `-Dorg.lwjgl.librarypath=${NATIVES_DIR}`,
     '-Dminecraft.launcher.brand=Implicite',
     '-Dminecraft.launcher.version=1.0.0',
-    '-cp', classpath.join(':'),
+    '-cp', classpath.join(path.delimiter),
   );
 
   const mainClass = forgeData.versionInfo.mainClass || 'net.minecraft.launchwrapper.Launch';

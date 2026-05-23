@@ -20,10 +20,10 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { spawnSync } = require('child_process');
 
 const logger = require('./logger');
 const { fetchJSON, downloadFile } = require('./downloader');
+const zip = require('./zip');
 
 const DEFAULTS_MANIFEST_URL = 'https://cdn.happylab.hu/implicite/defaults/defaults.json';
 
@@ -103,18 +103,17 @@ async function applyZipEntry(entry, mcDir, cacheDir) {
   try { fs.rmSync(staging, { recursive: true, force: true }); } catch {}
   fs.mkdirSync(staging, { recursive: true });
 
-  // macOS-specifikus szemét kihagyása már az unzip szintjén.
-  const res = spawnSync('unzip', [
-    '-oq', tmpZip, '-d', staging,
-    '-x', '__MACOSX/*', '-x', '*/.DS_Store', '-x', '.DS_Store',
-  ], { stdio: 'ignore' });
-
-  try { fs.unlinkSync(tmpZip); } catch {}
-
-  if (res.status !== 0) {
+  // macOS-specifikus szemét kihagyása már a kicsomagolás szintjén.
+  try {
+    zip.extractAll(tmpZip, staging, {
+      exclude: ['__MACOSX/*', '*/.DS_Store', '.DS_Store'],
+    });
+  } catch (e) {
+    try { fs.unlinkSync(tmpZip); } catch {}
     try { fs.rmSync(staging, { recursive: true, force: true }); } catch {}
-    throw new Error(`unzip hibázott (exit ${res.status})`);
+    throw new Error(`kicsomagolás hibázott: ${e.message}`);
   }
+  try { fs.unlinkSync(tmpZip); } catch {}
 
   // Wrapper-detection: ha a staging-ben pontosan egy mappa van, és annak
   // neve megegyezik a célmappa alapnevével (pl. dest="resourcepacks/" →

@@ -1,3 +1,14 @@
+// ---------- Platform class on <body> (CSS használja platform-conditional layout-hoz) ----------
+document.body.classList.add(`platform-${window.launcher.platform}`);
+
+// ---------- Window controls (frameless platformokon — Win/Linux) ----------
+if (window.launcher.platform !== 'darwin') {
+  const winMin = document.getElementById('win-minimize');
+  const winClose = document.getElementById('win-close');
+  if (winMin) winMin.addEventListener('click', () => window.launcher.windowMinimize());
+  if (winClose) winClose.addEventListener('click', () => window.launcher.windowClose());
+}
+
 // ---------- DOM refs ----------
 const screenLogin = document.getElementById('screen-login');
 const screenMain  = document.getElementById('screen-main');

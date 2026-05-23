@@ -2,7 +2,23 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const APP_DIR = path.join(os.homedir(), 'Library', 'Application Support', 'Implicite');
+function computeAppDir() {
+  if (process.platform === 'darwin') {
+    return path.join(os.homedir(), 'Library', 'Application Support', 'Implicite');
+  }
+  if (process.platform === 'win32') {
+    return path.join(
+      process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'),
+      'Implicite',
+    );
+  }
+  return path.join(
+    process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'),
+    'implicite',
+  );
+}
+
+const APP_DIR = computeAppDir();
 const LOG_FILE = path.join(APP_DIR, 'debug.log');
 
 function ensureDir() {
