@@ -1,144 +1,159 @@
 # Release & Auto-Update útmutató
 
-Ez a launcher `electron-updater`-rel auto-frissít a saját CDN-edről (`cdn.happylab.hu`). Egy build = három fájl, amit a CDN-re feltöltesz, és onnantól minden már fent lévő telepítés magától észreveszi és letölti.
+A launcher `electron-updater`-rel auto-frissít **GitHub Releases**-ről. Egy `npm run release` parancs buildel + feltölt mindent a `AdiihYT/implicite-launcher` repó Release-eibe, és a már telepített launcher-ek a következő indításnál maguktól észreveszik.
 
 ---
 
-## 1. Hogyan kerül a játékos gépére az első verzió?
+## 1. Egyszeri setup: GitHub Personal Access Token
 
-1. Lokálisan buildelsz egy `.dmg`-t (lásd 3. pont).
-2. Feltöltöd valahova publikusra (CDN, weboldal). A linket átadod a játékosnak.
-3. A játékos letölti, megnyitja a `.dmg`-t, átdrag-eli az `Implicite Launcher.app`-ot az `Applications/` mappába.
-4. **Első indításnál Gatekeeper warning lesz** (mert nincs Apple Developer code-signing). A játékosnak ezt egyszer kell csinálnia:
-   - Right-click az `Implicite Launcher.app`-on → **Open**
-   - A dialógusban: **Open** (második gomb)
-   - Innentől a Gatekeeper "whitelistezi" az appot, dupla-kattintásra nyitható
-5. Innentől minden további frissítés automatikus.
+Ez kell ahhoz, hogy az `electron-builder` a Te nevedben tudjon Release-t létrehozni és fájlokat feltölteni a repóba.
 
-> **Egyetlen verzió, amit kézzel kell letölteniük: az első.** Utána az autoupdater intézi.
+### 1.1. Token létrehozása
 
----
+1. Menj ide: <https://github.com/settings/tokens?type=beta> (fine-grained token, javasolt) **vagy** <https://github.com/settings/tokens> (classic)
+2. **Fine-grained (ajánlott)**:
+   - **Token name**: pl. `implicite-launcher releases`
+   - **Expiration**: 1 év (vagy "No expiration" ha nem zavar)
+   - **Repository access**: Only select repositories → válaszd ki: `AdiihYT/implicite-launcher`
+   - **Repository permissions** → **Contents**: Read and write
+   - **Generate token** → másold ki a `github_pat_xxx` stringet
+3. **Classic** (ha a fine-grained UI nem megy):
+   - Scope: `repo` (az egész) — vagy ha publik a repo: `public_repo` is elég
+   - Generate → másold ki a `ghp_xxx` stringet
 
-## 2. Hogyan élik meg a játékosok a frissítést?
+### 1.2. Token mentése
 
-Háttérben, transzparensen:
-
-1. Launcher indulása után 3 másodperccel ellenőrzi a CDN-en a `latest-mac.yml`-t.
-2. Ha újabb verzió érhető el, fent egy kis pasztila banner jelenik meg: `Frissítés letöltése v1.0.1 – 42%`.
-3. Letöltés végén: `Frissítés készen áll (v1.0.1)` + **[Újraindítás]** gomb.
-4. Kattintásra a launcher kilép, az új verziót telepíti, és újraindul.
-5. Ha az auto-install valamilyen okból megakad (ritka, általában unsigned-app + macOS biztonsági szabály miatt): `Auto-frissítés sikertelen` + **[Letöltés kézzel]** gomb, ami megnyitja a CDN-es release mappát böngészőben. A játékos onnan tudja az új `.dmg`-t kézzel telepíteni.
-
----
-
-## 3. Hogyan adsz ki új verziót
-
-### 3.1. Verziószám bumpolása
-
-A `package.json` `version` mezőjét emeld. SemVer:
-- **patch** (1.0.0 → 1.0.1): bugfix, kompatibilis változás
-- **minor** (1.0.0 → 1.1.0): új feature
-- **major** (1.0.0 → 2.0.0): breaking change (a játékos `Application Support/Implicite/` mappáját elromlasztanád)
+A legegyszerűbb: tedd be a shell rc-be (`~/.zshrc`), és nyiss egy új terminált:
 
 ```bash
-# kézi szerkesztés VAGY
-npm version patch    # auto bump + git tag
+echo 'export GH_TOKEN="github_pat_xxx_itt_a_token"' >> ~/.zshrc
+source ~/.zshrc
 ```
 
-### 3.2. Build
-
-A repo gyökerében:
-
+Verifikáld:
 ```bash
-npm install            # ha még nem fut friss deps-szel
-npm run build
+echo $GH_TOKEN     # nem üres
 ```
 
-A build elkészül az alábbi mappába: `dist/`
-
-Tartalom a `dist/` mappában (Universal, arm64+x64 egyben):
-
-```
-dist/
-├── Implicite Launcher-1.0.1-universal.dmg     ← Új telepítéshez
-├── Implicite Launcher-1.0.1-universal-mac.zip ← Auto-updater ezt használja
-├── latest-mac.yml                              ← Manifest (sha, version, url-ek)
-└── builder-debug.yml / builder-effective-config.yaml   ← Build artifakták (figyelmen kívül)
-```
-
-A `latest-mac.yml` egy YAML, ami a verziószámot és a `.zip` SHA512 hash-ét tartalmazza. Az `electron-updater` ezt kéri le a CDN-ről, és ebből tudja meg, kell-e frissíteni.
-
-> **Megj.:** az első buildnél `electron-builder` letölti a universal Electron binárist (~300 MB), de cache-eli — második buildtől gyors lesz.
-
-### 3.3. Feltöltés a CDN-re
-
-Hozz létre (vagy biztosítsd, hogy létezik) ezt a mappát a CDN-en:
-
-```
-https://cdn.happylab.hu/implicite/releases/
-```
-
-Töltsd fel **pontosan ezt a 3 fájlt** a `dist/`-ből:
-
-| Fájl | Mire való |
-|---|---|
-| `Implicite Launcher-<verzió>-universal.dmg` | Új telepítéshez |
-| `Implicite Launcher-<verzió>-universal-mac.zip` | Auto-updater forrása |
-| `latest-mac.yml` | A manifest, amit a launcher poll-oz |
-
-A `.dmg`-t és `.zip`-et a régiek MELLÉ tedd (megőrzés / rollback miatt). A `latest-mac.yml`-t **MINDIG felülírd** — ez a kapcsoló, ami a frissítést kiváltja minden játékosnál.
-
-> **Fontos:** ne nevezd át a fájlokat! A `latest-mac.yml` benne hivatkozza az URL-eket, és ha a fájlnév nem stimmel, az auto-update 404-re fut.
-
-### 3.4. Sikerellenőrzés
-
-1. Indítsd el a lokális launcher-t (NE a `dist/`-ből, hanem a Te telepített verziód).
-2. ~3 másodperc múlva fent meg kell jelennie a "Frissítés letöltése..." banner-nek.
-3. A `debug.log`-ban (Settings → Debug log): `UPDATER: ...` sorok.
-4. Letöltés végén kattints az **Újraindítás** gombra → az új verzió ott kell legyen.
+> Ha nem akarod a shell rc-be tenni: `GH_TOKEN=xxx npm run release` inline is megy.
 
 ---
 
-## 4. Tipikus hibák és teendők
+## 2. Új release kiadása
 
-### "Auto-frissítés sikertelen" üzenet a játékosoknál
+A teljes folyamat 3 parancs:
 
-Ok: unsigned macOS app + macOS biztonsági szabály. **Nem hiba a kódban.** A fallback link megnyit egy böngészőablakot a CDN-es release mappára, ahonnan a játékos manuálisan letölti az új `.dmg`-t.
+```bash
+# 1. Verzió bumpolása (kézzel a package.json-ban VAGY npm version)
+npm version patch      # 1.0.3 → 1.0.4 (auto bump + git tag létrehozása)
+# vagy: npm version minor / npm version major
 
-Hosszú távú megoldás: Apple Developer Program ($99/év) + code-signing + notarization. Ezt a `build.mac.identity: null` blokkban a `package.json`-ban kell visszaállítani egy valós Developer ID-re.
+# 2. Build + publish egy lépésben
+npm run release
+
+# 3. Push (a `npm version` által létrehozott tag-et is fel kell tolni)
+git push --follow-tags
+```
+
+Az `npm run release` lefutása:
+1. `electron-builder` lefut, és elkészíti a `dist/`-ben a `.dmg`, `.zip`, `latest-mac.yml` fájlokat (universal arm64+x64)
+2. Felcsatlakozik a GitHub API-ra a `GH_TOKEN`-nel
+3. Létrehoz egy új Release-t a repóban `v1.0.4` névvel (a verziószám a `package.json`-ból jön)
+4. Feltölti mind a 3 fájlt mint Release Asset
+5. Publikálja a release-t (alapból nem draft)
+
+Idő: ~2-5 perc lassú netnél (170 MB feltöltés a GitHub-ra, ami sokkal gyorsabb mint pl. SSH-n keresztül a saját CDN-re).
+
+---
+
+## 3. Mit lát a felhasználó?
+
+A folyamat ugyanaz mint korábban, csak GitHub a forrás:
+
+1. Launcher indulása után 3 másodperccel ellenőrzi a `https://api.github.com/repos/AdiihYT/implicite-launcher/releases/latest`-et
+2. Ha újabb verzió érhető el (a `package.json` `version`-nél nagyobb): banner megjelenik `Frissítés letöltése v1.0.4 – 42%`
+3. Letöltés végén: `Frissítés készen áll (v1.0.4)` + **[Újraindítás]** gomb
+4. Kattintásra: kilép, telepít, újraindul
+5. Fallback hibánál: `Auto-frissítés sikertelen` + **[Letöltés kézzel]** gomb → megnyitja a `https://github.com/AdiihYT/implicite-launcher/releases/latest` oldalt
+
+---
+
+## 4. Első telepítés új gépekre
+
+A GitHub Release oldalon a `.dmg` fájl publikus letöltési linket kap, pl.:
+```
+https://github.com/AdiihYT/implicite-launcher/releases/latest
+```
+
+Ezt küldd az új játékosoknak. Ők:
+1. Letöltik a `.dmg`-t
+2. Átdrag-elik az `Applications/` mappába
+3. Első indításnál: jobb klikk → Megnyitás (Gatekeeper warning, egyszeri, mert nincs code signing)
+4. Innentől az auto-updater intézi a frissítéseket
+
+---
+
+## 5. Draft release (opcionális, ha tesztelni akarsz publikálás előtt)
+
+Ha egy új verziót nem akarsz mindenkinek azonnal kiadni, használhatsz draft release-t:
+
+A `package.json` `build.publish` blokkjában:
+```json
+"releaseType": "draft"
+```
+
+Az `npm run release` lefut, a release létrejön draft-ként a GitHub-on. **Az `electron-updater` draft release-eket nem lát.** Tesztelsz, és amikor készen áll, manuálisan a GitHub repo Releases oldalán megnyomod a "Publish release" gombot — onnantól megy ki minden launcher-nek.
+
+Általában nem szükséges, csak ha nagyobb változás van és komolyabb staging kell.
+
+---
+
+## 6. Migration az 1.0.3-as CDN-buildtől
+
+Az eddig telepített 1.0.3-as kliensek (a Te gépeden lévő) a CDN-en lévő `latest-mac.yml`-t pollozzák, **nem** a GitHub-ot. Egyszeri kézi migráció kell:
+
+1. Vidd ki a következő GitHub release-t (`1.0.4`).
+2. Manuálisan töltsd le az `Implicite Launcher-1.0.4-universal.dmg`-t a GitHub Release oldalról.
+3. Cseréld a `Applications/Implicite Launcher.app`-ot.
+4. Onnantól a saját launcher-ed is GitHub-ról fog frissülni.
+
+(Mivel valószínűleg csak egy gépen van telepítve eddig — a saját Mac-eden —, ez nem nagy ügy. Ha viszont már több játékos telepítette az 1.0.3-at: tartsd a CDN-en a `latest-mac.yml`-t friss `1.0.4` verzióra mutatva még egy round-ig, hogy átmigráljanak.)
+
+---
+
+## 7. Tipikus hibák
+
+### `Error: 401 Bad credentials`
+A `GH_TOKEN` nincs beállítva, vagy lejárt, vagy nincs `Contents: write` joga az adott repóra. Hozz létre újat (1.1).
+
+### `Error: Resource not accessible by personal access token`
+Fine-grained token van, de a Repository access vagy a Permissions nincs jól. Generálj újat `Contents: Read and write` joggal.
+
+### `Error: Cannot find module 'electron-updater'`
+Csak akkor fordulhat elő ha valaki manuálisan nyúlt a `node_modules`-be. `npm install`.
+
+### A frissítés letöltődik, de `Auto-frissítés sikertelen`
+Várható unsigned build-nél olykor. A fallback "Letöltés kézzel" gomb → GitHub release oldal. Hosszú távon: Apple Developer Program.
 
 ### Build error: `assets/icon.icns missing`
-
-A `package.json` build configja **nem** hivatkozza, mert még nincs logód. Ha készítesz egyet, tedd `assets/icon.icns` névvel, és a `build.mac` blokkba add vissza az `"icon": "assets/icon.icns"` sort.
-
-### Build error: lassú vagy elakadt
-
-Az első build letölti a universal Electron binárist (~300 MB). Ha rossz a háló: várj, vagy próbáld újra. A cache helye: `~/Library/Caches/electron-builder/`.
-
-### Az auto-updater nem indul el dev módban
-
-Ez szándékos: `app.isPackaged` ellenőrzés. Csak a `.dmg`-vel telepített build-ben fut. Ha mégis tesztelni akarod, ideiglenesen vedd ki az `if (!app.isPackaged) return;` sort a `main.js`-ben.
-
-### "There is no signed app to verify" (electron-updater hiba a logban)
-
-Várható unsigned build-nél. A launcher elkapja, és az "Auto-frissítés sikertelen" + manuális letöltés linket mutatja. Nem fatal.
+A `package.json` build configja jelenleg **nem** hivatkozza, mert még nincs logód. Ha készítesz egyet (.icns formátum), tedd `assets/icon.icns` névvel, és a `build.mac` blokkba add hozzá: `"icon": "assets/icon.icns"`.
 
 ---
 
-## 5. Mit NE csinálj
+## 8. Quick checklist egy release-hez
 
-- **Ne** módosítsd a `latest-mac.yml`-t kézzel. Mindig a build által generáltat töltsd fel.
-- **Ne** töltsd fel a `dist/mac-universal/` mappa többi tartalmát (`Implicite Launcher.app/`, `builder-debug.yml`, stb.) — csak a fenti 3 fájlra van szükség.
-- **Ne** verziózd lefelé (1.0.1 → 1.0.0). Az `electron-updater` szigorúan SemVer-t használ, és lefelé nem frissít. Ha rollback kell: emelj egy patch verziót egy korábbi build alapján (1.0.0 → 1.0.0-rollback.1 → vagy 1.0.2 hibajavítással).
-- **Ne** változtasd meg az `appId`-t (`com.implicite.launcher`) egy újabb verzióban — az auto-updater másik appként kezelné, és nem frissítené a meglévőt.
+- [ ] `GH_TOKEN` környezeti változó beállítva (egyszer kell)
+- [ ] `npm version patch` (vagy `minor`/`major`) — bumpolja a verziót + git tag
+- [ ] `npm run release` — buildel + felölt GitHub-ra
+- [ ] `git push --follow-tags` — a tag is felmegy a GitHub repóba
+- [ ] Egy meglévő launcher elindítva ~3 mp után megjelenik a frissítés banner
+- [ ] **[Újraindítás]** sikeresen átfrissít az új verzióra
 
 ---
 
-## 6. Gyors checklist egy release-hez
+## 9. Mit NE csinálj
 
-- [ ] `package.json` `version` bumpolva
-- [ ] `npm run build` lefutott hiba nélkül
-- [ ] A `dist/` mappában megvan mindhárom fájl (`.dmg`, `.zip`, `latest-mac.yml`)
-- [ ] A 3 fájl fel van töltve a `https://cdn.happylab.hu/implicite/releases/`-re
-- [ ] Egy meglévő (régi) launcher-rel megnyitva 3s után banner jelenik meg
-- [ ] Az **Újraindítás** sikeresen frissít a Te gépeden
+- **Ne** módosítsd a GitHub Release-be feltöltött fájlokat (`latest-mac.yml`, `.zip`, `.dmg`) kézzel. A `electron-updater` SHA512-t ellenőriz, kézi módosítás hibára futtatja.
+- **Ne** szedj le egy Release-t, ha az `electron-updater` már látta. Inkább adj ki egy újabbat (1.0.4 → 1.0.5) javítással.
+- **Ne** verziózz lefelé. `electron-updater` szigorú SemVer, lefelé nem frissít.
+- **Ne** változtasd meg az `appId`-t (`com.implicite.launcher`) egy újabb verzióban — az auto-updater másik appként kezelné.

@@ -186,11 +186,12 @@ function setupAutoUpdater() {
   });
   autoUpdater.on('error', (err) => {
     logger.warn(`UPDATER: error – ${err.message}`);
-    // Fallback URL: a felhasználó manuálisan tudja letölteni a legfrissebb DMG-t.
+    // Fallback URL: a felhasználó manuálisan tudja letölteni a legfrissebb DMG-t
+    // a GitHub Releases oldalról.
     sendUpdateStatus({
       state: 'error',
       error: err.message,
-      manualUrl: 'https://cdn.happylab.hu/implicite/releases/',
+      manualUrl: 'https://github.com/AdiihYT/implicite-launcher/releases/latest',
     });
   });
 
@@ -227,7 +228,7 @@ function registerIpc() {
   });
 
   ipcMain.handle('open-manual-update', () => {
-    shell.openExternal('https://cdn.happylab.hu/implicite/releases/');
+    shell.openExternal('https://github.com/AdiihYT/implicite-launcher/releases/latest');
   });
 
   ipcMain.handle('force-kill', () => {
