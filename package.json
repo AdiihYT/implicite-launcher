@@ -1,6 +1,6 @@
 {
   "name": "implicite-launcher",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Implicite Minecraft Launcher",
   "main": "main.js",
   "scripts": {
@@ -13,8 +13,14 @@
     "mac": {
       "category": "public.app-category.games",
       "target": [
-        { "target": "dmg", "arch": "universal" },
-        { "target": "zip", "arch": "universal" }
+        {
+          "target": "dmg",
+          "arch": "universal"
+        },
+        {
+          "target": "zip",
+          "arch": "universal"
+        }
       ],
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
