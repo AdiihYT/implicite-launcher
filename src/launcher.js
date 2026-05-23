@@ -155,7 +155,7 @@ function findJavaBinary(dir, depth = 0) {
 }
 
 async function ensureJava8(onStatus, onProgress) {
-  onStatus?.('Java 8 ellenőrzése...');
+  onStatus?.('Java ellenőrzése...');
   const existing = findJavaBinary(JAVA_DIR);
   if (existing) {
     logger.info(`JAVA: megvan – ${existing}`);
@@ -168,7 +168,7 @@ async function ensureJava8(onStatus, onProgress) {
     + `&archive_type=tar.gz&java_package_type=jre&javafx_bundled=false`
     + `&latest=true&release_status=ga`;
 
-  onStatus?.('Java 8 metaadatok letöltése...');
+  onStatus?.('Java előkészítése...');
   logger.info(`JAVA: Azul Zulu API – ${apiUrl}`);
   const meta = await fetchJSON(apiUrl);
   if (!Array.isArray(meta) || !meta.length) {
@@ -179,10 +179,10 @@ async function ensureJava8(onStatus, onProgress) {
   logger.info(`JAVA: package – ${pkg.name}`);
 
   const tarPath = path.join(CACHE_DIR, `jre8-${arch}.tar.gz`);
-  onStatus?.('Java 8 letöltése...');
-  await downloadFile(pkg.download_url, tarPath, (p) => onProgress?.('Java 8', p));
+  onStatus?.('Java letöltése...');
+  await downloadFile(pkg.download_url, tarPath, (p) => onProgress?.('Java letöltése', p));
 
-  onStatus?.('Java 8 kibontása...');
+  onStatus?.('Java telepítése...');
   const res = spawnSync('tar', ['-xzf', tarPath, '-C', JAVA_DIR], { stdio: 'ignore' });
   if (res.status !== 0) throw new Error('Java 8 kibontás sikertelen (tar exit ' + res.status + ')');
 
@@ -203,7 +203,7 @@ async function getVanillaVersionJson(onStatus) {
   if (fs.existsSync(cached)) {
     try { return JSON.parse(fs.readFileSync(cached, 'utf8')); } catch {}
   }
-  onStatus?.('Vanilla 1.8.9 manifest letöltése...');
+  onStatus?.('Minecraft adatok lekérése...');
   const manifest = await fetchJSON(VERSION_MANIFEST_URL);
   const entry = (manifest.versions || []).find((v) => v.id === MC_VERSION);
   if (!entry) throw new Error('1.8.9 nem található a Mojang version manifestben.');
@@ -219,8 +219,8 @@ async function ensureVanillaClientJar(versionJson, onStatus, onProgress) {
   if (fs.existsSync(jarPath) && fs.statSync(jarPath).size > 0) return jarPath;
   const url = versionJson.downloads?.client?.url;
   if (!url) throw new Error('vanilla version JSON: hiányzik downloads.client.url');
-  onStatus?.('Vanilla 1.8.9 client JAR letöltése...');
-  await downloadFile(url, jarPath, (p) => onProgress?.('Client JAR', p));
+  onStatus?.('Minecraft alapfájlok letöltése...');
+  await downloadFile(url, jarPath, (p) => onProgress?.('Minecraft alapfájlok', p));
   return jarPath;
 }
 
@@ -291,7 +291,7 @@ async function ensureAssets(versionJson, onStatus, onProgress) {
 
   const indexPath = path.join(indexDir, `${ai.id}.json`);
   if (!fs.existsSync(indexPath)) {
-    onStatus?.('Asset index letöltése...');
+    onStatus?.('Játékelemek listájának lekérése...');
     await downloadFile(ai.url, indexPath);
   }
   const index = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
@@ -313,13 +313,13 @@ async function ensureAssets(versionJson, onStatus, onProgress) {
     tasks.push(async () => { await downloadFile(url, dest); });
   }
   if (tasks.length) {
-    onStatus?.(`Assetek letöltése (${tasks.length} fájl)...`);
+    onStatus?.(`Játékelemek letöltése (${tasks.length} fájl)...`);
     let done = 0;
     const total = tasks.length;
     const reportTasks = tasks.map((t) => async () => {
       await t();
       done++;
-      onProgress?.('Assetek', done / total);
+      onProgress?.('Játékelemek', done / total);
     });
     await downloadConcurrent(reportTasks, 16);
   }
@@ -419,7 +419,7 @@ function sha256File(filePath) {
 async function ensureMods(onStatus, onProgress) {
   fs.mkdirSync(MODS_DIR, { recursive: true });
 
-  onStatus?.('Mod manifest letöltése...');
+  onStatus?.('Mod-lista lekérése...');
   let manifest;
   try {
     manifest = await fetchJSON(MODS_MANIFEST_URL);
@@ -540,16 +540,16 @@ async function launch({ username, ram, onStatus, onProgress }) {
 
   const javaPath = await ensureJava8(onStatus, onProgress);
 
-  onStatus?.('Vanilla 1.8.9 verzió betöltése...');
+  onStatus?.('Minecraft verzió betöltése...');
   const vanilla = await getVanillaVersionJson(onStatus);
 
-  onStatus?.('Forge installer ellenőrzése...');
+  onStatus?.('Mod-rendszer ellenőrzése...');
   const installerPath = await forge.ensureForgeInstaller(FORGE_CACHE, onStatus);
 
-  onStatus?.('Forge profil olvasása...');
+  onStatus?.('Mod-rendszer előkészítése...');
   const forgeData = forge.readForgeProfile(installerPath);
 
-  onStatus?.('Forge universal JAR kibontása...');
+  onStatus?.('Mod-rendszer telepítése...');
   const forgeUniversalPath = await forge.extractForgeUniversal(
     installerPath,
     LIBRARIES_DIR,
@@ -589,9 +589,9 @@ async function launch({ username, ram, onStatus, onProgress }) {
 
   // --- Letöltések ---
   const allLibCount = vanillaLibs.length + forgeLibTasks.length;
-  onStatus?.(`Library-k letöltése (${allLibCount} fájl)...`);
+  onStatus?.(`Játékkomponensek letöltése (${allLibCount} fájl)...`);
   let libDone = 0;
-  const reportLib = () => { libDone++; onProgress?.('Library-k', libDone / allLibCount); };
+  const reportLib = () => { libDone++; onProgress?.('Játékkomponensek', libDone / allLibCount); };
 
   const vanillaDlTasks = [];
   for (const lib of vanillaLibs) {
@@ -615,7 +615,7 @@ async function launch({ username, ram, onStatus, onProgress }) {
   await downloadConcurrent([...vanillaDlTasks, ...forgeDlTasks], 8);
 
   // --- Natives kicsomagolás ---
-  onStatus?.('Native fájlok kicsomagolása...');
+  onStatus?.('Rendszerkomponensek előkészítése...');
   try {
     for (const entry of fs.readdirSync(NATIVES_DIR)) {
       try { fs.rmSync(path.join(NATIVES_DIR, entry), { recursive: true, force: true }); } catch {}
@@ -624,7 +624,7 @@ async function launch({ username, ram, onStatus, onProgress }) {
 
   if (macArm64) {
     // macOS arm64-en a Tanmay dylib-eket közvetlenül a natives dir-be tesszük.
-    onStatus?.('Tanmay LWJGL natives letöltése...');
+    onStatus?.('Apple Silicon támogatás letöltése...');
     for (const d of lwjgl.TANMAY_DYLIBS) {
       const dest = path.join(NATIVES_DIR, d.name);
       await downloadFile(d.url, dest);
@@ -646,7 +646,7 @@ async function launch({ username, ram, onStatus, onProgress }) {
 
   // macOS arm64-en a Tanmay JAR-ok letöltése a libraries dir-be.
   if (macArm64) {
-    onStatus?.('Tanmay LWJGL JAR-ok letöltése...');
+    onStatus?.('Apple Silicon komponensek letöltése...');
     for (const j of lwjgl.TANMAY_JARS) {
       const dest = path.join(LIBRARIES_DIR, j.relPath);
       if (!(fs.existsSync(dest) && fs.statSync(dest).size > 0)) {
@@ -660,7 +660,7 @@ async function launch({ username, ram, onStatus, onProgress }) {
     // így a natív hívás soha nem fut le. Idempotent.
     const lwjglfatPath = path.join(LIBRARIES_DIR,
       lwjgl.TANMAY_JARS.find((j) => j.name === 'lwjglfat.jar').relPath);
-    onStatus?.('Tanmay LWJGL patch (setResizable no-op)...');
+    onStatus?.('Apple Silicon optimalizáció...');
     patchTanmayLwjglSetResizable(lwjglfatPath);
   }
 
