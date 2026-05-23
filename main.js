@@ -161,7 +161,9 @@ function setupAutoUpdater() {
   }
 
   autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = false;
+  // A letöltött frissítés automatikusan települ a launcher kilépésekor —
+  // a felhasználó következő indításánál már az új verzió jön be.
+  autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.logger = {
     info:  (m) => logger.info(`UPDATER: ${m}`),
     warn:  (m) => logger.warn(`UPDATER: ${m}`),
@@ -216,6 +218,7 @@ function registerIpc() {
   ipcMain.handle('open-debug-log', () => shell.openPath(logger.LOG_FILE));
   ipcMain.handle('open-app-dir', () => shell.openPath(logger.APP_DIR));
 
+  ipcMain.handle('get-app-version', () => app.getVersion());
   ipcMain.handle('get-update-status', () => latestUpdateState);
   ipcMain.handle('install-update', () => {
     if (!autoUpdater) return { success: false, error: 'updater inaktív (dev mode)' };

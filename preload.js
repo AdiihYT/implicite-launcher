@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('launcher', {
   openAppDir: () => ipcRenderer.invoke('open-app-dir'),
 
   // Auto-updater
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   getUpdateStatus: () => ipcRenderer.invoke('get-update-status'),
   installUpdate: () => ipcRenderer.invoke('install-update'),
   openManualUpdate: () => ipcRenderer.invoke('open-manual-update'),

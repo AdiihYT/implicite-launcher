@@ -12,17 +12,6 @@
 <body>
   <div class="titlebar"></div>
 
-  <!-- ========== UPDATE BANNER ========== -->
-  <div id="update-banner" class="update-banner" hidden>
-    <div class="update-banner-inner">
-      <span id="update-text" class="update-text"></span>
-      <div class="update-progress-track" hidden>
-        <div id="update-progress-fill" class="update-progress-fill"></div>
-      </div>
-      <button id="update-action" class="update-action" hidden>Újraindítás</button>
-    </div>
-  </div>
-
   <!-- ========== LOGIN SCREEN ========== -->
   <section id="screen-login" class="screen active">
     <div class="login-card">
@@ -111,6 +100,22 @@
               <input id="keepopen-toggle" type="checkbox" />
               <span class="switch-slider"></span>
             </label>
+          </div>
+        </section>
+
+        <section class="setting setting-update">
+          <div class="setting-label">
+            <h3>Frissítések</h3>
+            <p>Jelenlegi verzió: <span id="current-version" class="version-chip">—</span></p>
+          </div>
+          <div class="setting-control update-control">
+            <div id="update-status-text" class="update-status-text">Naprakész</div>
+            <div id="update-progress-row" class="update-progress-row" hidden>
+              <div class="update-progress-track">
+                <div id="update-progress-fill" class="update-progress-fill"></div>
+              </div>
+            </div>
+            <button id="update-restart-btn" class="btn-ghost update-restart" hidden></button>
           </div>
         </section>
 

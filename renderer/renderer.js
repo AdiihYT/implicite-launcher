@@ -21,11 +21,11 @@ const keepOpenTgl  = document.getElementById('keepopen-toggle');
 const openLogBtn   = document.getElementById('open-log-btn');
 const openDirBtn   = document.getElementById('open-dir-btn');
 
-const updateBanner = document.getElementById('update-banner');
-const updateText   = document.getElementById('update-text');
-const updateAction = document.getElementById('update-action');
-const updateProgressTrack = document.querySelector('.update-progress-track');
-const updateProgressFill  = document.getElementById('update-progress-fill');
+const currentVersionEl   = document.getElementById('current-version');
+const updateStatusText   = document.getElementById('update-status-text');
+const updateProgressRow  = document.getElementById('update-progress-row');
+const updateProgressFill = document.getElementById('update-progress-fill');
+const updateRestartBtn   = document.getElementById('update-restart-btn');
 
 // ---------- State ----------
 let currentSettings = null;
@@ -129,48 +129,73 @@ window.launcher.onGameStatus((data) => {
   else setPhase('idle');
 });
 
-// ---------- Auto-updater banner ----------
+// ---------- Auto-updater (Settings → Frissítések szekció) ----------
+function setUpdateStatusTone(tone) {
+  updateStatusText.classList.remove('is-active', 'is-error');
+  if (tone) updateStatusText.classList.add(tone);
+}
+
 function renderUpdateStatus(status) {
+  // Alap: minden el van rejtve, idle szöveg
+  updateProgressRow.hidden = true;
+  updateRestartBtn.hidden = true;
+  updateRestartBtn.classList.remove('error-mode');
+  updateRestartBtn.disabled = false;
+
   if (!status || status.state === 'idle') {
-    updateBanner.hidden = true;
+    updateStatusText.textContent = 'Naprakész';
+    setUpdateStatusTone(null);
     return;
   }
 
-  updateBanner.hidden = false;
-  updateAction.classList.remove('error-mode');
-
   if (status.state === 'checking') {
-    updateText.textContent = 'Frissítés ellenőrzése...';
-    updateProgressTrack.hidden = true;
-    updateAction.hidden = true;
-  } else if (status.state === 'downloading') {
+    updateStatusText.textContent = 'Frissítés ellenőrzése...';
+    setUpdateStatusTone('is-active');
+    return;
+  }
+
+  if (status.state === 'downloading') {
     const pct = Math.round((status.progress || 0) * 100);
-    updateText.textContent = `Frissítés letöltése${status.version ? ` v${status.version}` : ''} – ${pct}%`;
-    updateProgressTrack.hidden = false;
+    updateStatusText.textContent = status.version
+      ? `v${status.version} letöltése · ${pct}%`
+      : `Letöltés · ${pct}%`;
+    setUpdateStatusTone('is-active');
+    updateProgressRow.hidden = false;
     updateProgressFill.style.width = `${pct}%`;
-    updateAction.hidden = true;
-  } else if (status.state === 'ready') {
-    updateText.textContent = `Frissítés készen áll${status.version ? ` (v${status.version})` : ''}`;
-    updateProgressTrack.hidden = true;
-    updateAction.hidden = false;
-    updateAction.textContent = 'Újraindítás';
-    updateAction.onclick = async () => {
-      updateAction.disabled = true;
+    return;
+  }
+
+  if (status.state === 'ready') {
+    updateStatusText.textContent = status.version
+      ? `v${status.version} készen áll — a következő indításnál aktiválódik`
+      : 'Frissítés készen áll — a következő indításnál aktiválódik';
+    setUpdateStatusTone('is-active');
+    updateRestartBtn.hidden = false;
+    updateRestartBtn.textContent = 'Újraindítás most';
+    updateRestartBtn.onclick = async () => {
+      updateRestartBtn.disabled = true;
       await window.launcher.installUpdate();
     };
-  } else if (status.state === 'error') {
-    updateText.textContent = 'Auto-frissítés sikertelen';
-    updateProgressTrack.hidden = true;
-    updateAction.hidden = false;
-    updateAction.textContent = 'Letöltés kézzel';
-    updateAction.classList.add('error-mode');
-    updateAction.onclick = () => window.launcher.openManualUpdate();
+    return;
+  }
+
+  if (status.state === 'error') {
+    updateStatusText.textContent = 'Auto-frissítés sikertelen';
+    setUpdateStatusTone('is-error');
+    updateRestartBtn.hidden = false;
+    updateRestartBtn.classList.add('error-mode');
+    updateRestartBtn.textContent = 'Letöltés kézzel';
+    updateRestartBtn.onclick = () => window.launcher.openManualUpdate();
   }
 }
 
 window.launcher.onUpdateStatus(renderUpdateStatus);
 (async () => {
-  const initial = await window.launcher.getUpdateStatus();
+  const [version, initial] = await Promise.all([
+    window.launcher.getAppVersion(),
+    window.launcher.getUpdateStatus(),
+  ]);
+  if (version) currentVersionEl.textContent = `v${version}`;
   renderUpdateStatus(initial);
 })();
 
