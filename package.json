@@ -1,0 +1,31 @@
+{
+  "name": "implicite-launcher",
+  "version": "1.0.0",
+  "description": "Implicite Minecraft Launcher",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --mac"
+  },
+  "build": {
+    "appId": "com.implicite.launcher",
+    "productName": "Implicite Launcher",
+    "mac": {
+      "category": "public.app-category.games",
+      "icon": "assets/icon.icns",
+      "target": "dmg",
+      "hardenedRuntime": false
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "renderer/**/*",
+      "assets/**/*"
+    ]
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.0.0"
+  }
+}

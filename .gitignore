@@ -1,0 +1,102 @@
+# ===== Node / npm =====
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm
+.yarn/
+.pnp.*
+
+# ===== Electron build output =====
+dist/
+out/
+build/
+release/
+app/
+*.dmg
+*.zip
+*.exe
+*.AppImage
+*.deb
+*.rpm
+*.snap
+*.pkg
+*.msi
+*.app/
+electron-builder.env
+
+# ===== Logs =====
+logs/
+*.log
+
+# ===== macOS =====
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.TemporaryItems
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# ===== Windows =====
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# ===== Linux =====
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ===== Editors / IDEs =====
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+.history/
+.cursor/
+
+# ===== Env / secrets =====
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ===== Project-specific cache / runtime artifacts =====
+# Local launcher data dir if anyone symlinks it into the repo for debugging
+Implicite/
+launcher-data/
+
+# Forge installer / asset downloads if accidentally placed in repo
+cache/
+forge-cache/
+
+# Generated icons / signing artifacts
+assets/icon.iconset/
+*.p12
+*.mobileprovision
+
+# ===== Misc =====
+.tmp/
+tmp/
+*.tmp
+*.bak
+*.orig
+coverage/
+.nyc_output/

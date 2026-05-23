@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: file:; script-src 'self';" />
+  <title>Implicite Launcher</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="titlebar"></div>
+
+  <!-- ========== LOGIN SCREEN ========== -->
+  <section id="screen-login" class="screen active">
+    <div class="login-card">
+      <h1 class="wordmark">Implicite</h1>
+      <p class="login-subtitle">Add meg a felhasználóneved a kezdéshez</p>
+
+      <form id="login-form" autocomplete="off">
+        <label class="field-label" for="login-username">Felhasználónév</label>
+        <input
+          id="login-username"
+          type="text"
+          name="username"
+          maxlength="16"
+          minlength="3"
+          pattern="[A-Za-z0-9_]+"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="pl. Steve_42"
+        />
+        <p id="login-error" class="login-error" aria-live="polite"></p>
+        <button id="login-submit" type="submit" class="btn-primary">Folytatás</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ========== MAIN SCREEN ========== -->
+  <section id="screen-main" class="screen">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">Implicite</span>
+        <span class="brand-version">LAUNCHER</span>
+      </div>
+
+      <nav class="tabs">
+        <button class="tab active" data-tab="play">Játék</button>
+        <button class="tab" data-tab="settings">Beállítások</button>
+      </nav>
+
+      <div class="user-pill">
+        <span class="user-dot"></span>
+        <span id="user-name" class="user-name">—</span>
+        <button id="logout-btn" class="user-logout" title="Kijelentkezés">⏻</button>
+      </div>
+    </header>
+
+    <!-- PLAY TAB -->
+    <main class="content tab-panel active" data-panel="play">
+      <div class="play-hero">
+        <h2 class="play-title">Implicite</h2>
+        <p class="play-subtitle">Implicite Kliens · 1.8.9</p>
+      </div>
+
+      <div class="launch-area">
+        <div class="status-row">
+          <span id="status-text" class="status-text">Készen áll az indításra</span>
+          <span id="status-pct" class="status-pct"></span>
+        </div>
+        <div class="progress-track">
+          <div id="progress-fill" class="progress-fill"></div>
+        </div>
+        <button id="launch-btn" class="btn-launch">START</button>
+      </div>
+    </main>
+
+    <!-- SETTINGS TAB -->
+    <main class="content tab-panel" data-panel="settings">
+      <div class="settings-list">
+        <section class="setting">
+          <div class="setting-label">
+            <h3>Memória (RAM)</h3>
+            <p>Mennyi memóriát kap a Minecraft.</p>
+          </div>
+          <div class="setting-control">
+            <input id="ram-slider" type="range" min="1" max="16" step="1" value="4" />
+            <span id="ram-value" class="ram-value">4 GB</span>
+          </div>
+        </section>
+
+        <section class="setting">
+          <div class="setting-label">
+            <h3>Launcher nyitva marad</h3>
+            <p>Játék indítása után ne rejtse el az ablakot.</p>
+          </div>
+          <div class="setting-control">
+            <label class="switch">
+              <input id="keepopen-toggle" type="checkbox" />
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+        </section>
+
+        <section class="setting setting-action">
+          <div class="setting-label">
+            <h3>Hibakeresés</h3>
+            <p>Debug napló és játékkönyvtár megnyitása.</p>
+          </div>
+          <div class="setting-control buttons">
+            <button id="open-log-btn" class="btn-ghost">Debug log</button>
+            <button id="open-dir-btn" class="btn-ghost">Játékkönyvtár</button>
+          </div>
+        </section>
+      </div>
+    </main>
+  </section>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
