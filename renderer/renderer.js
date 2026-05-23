@@ -62,8 +62,12 @@ function showTab(name) {
 // ---------- Settings ----------
 async function loadSettings() {
   currentSettings = await window.launcher.getSettings();
-  ramSlider.value = currentSettings.ram;
-  ramValue.textContent = `${currentSettings.ram} GB`;
+  const maxRam = typeof currentSettings.maxRam === 'number' && currentSettings.maxRam >= 1
+    ? currentSettings.maxRam
+    : 16;
+  ramSlider.max = String(maxRam);
+  ramSlider.value = String(Math.min(currentSettings.ram, maxRam));
+  ramValue.textContent = `${ramSlider.value} GB`;
   keepOpenTgl.checked = !!currentSettings.keepLauncherOpen;
   if (currentSettings.username) userNameEl.textContent = currentSettings.username;
 }

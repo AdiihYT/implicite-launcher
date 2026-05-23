@@ -57,21 +57,38 @@ function saveConfig(cfg) {
   }
 }
 
+// Max RAM = a gépen elérhető fizikai memória fele, GB-ban, legalább 1.
+function computeMaxRamGB() {
+  const totalGB = Math.floor(os.totalmem() / (1024 ** 3));
+  return Math.max(1, Math.floor(totalGB / 2));
+}
+
+function clampRam(value, maxRam) {
+  let v = typeof value === 'number' ? value : 4;
+  if (v < 1) v = 1;
+  if (v > maxRam) v = maxRam;
+  return v;
+}
+
 function getSettings() {
   const cfg = getConfig();
+  const maxRam = computeMaxRamGB();
   return {
     username:         typeof cfg.username === 'string' ? cfg.username : null,
-    ram:              typeof cfg.ram === 'number' ? cfg.ram : 4,
+    ram:              clampRam(cfg.ram, maxRam),
+    maxRam,
     keepLauncherOpen: !!cfg.keepLauncherOpen,
   };
 }
 
 function saveSettings(settings) {
   const current = getConfig();
+  const maxRam = computeMaxRamGB();
+  const incomingRam = typeof settings.ram === 'number' ? settings.ram : current.ram;
   const next = {
     ...current,
     username:         settings.username ?? null,
-    ram:              typeof settings.ram === 'number' ? settings.ram : current.ram || 4,
+    ram:              clampRam(incomingRam, maxRam),
     keepLauncherOpen: !!settings.keepLauncherOpen,
   };
   saveConfig(next);

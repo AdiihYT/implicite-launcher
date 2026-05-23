@@ -40,7 +40,7 @@
           pattern="[A-Za-z0-9_]+"
           autocomplete="off"
           spellcheck="false"
-          placeholder="pl. Steve_42"
+          placeholder="Írd ide a felhasználóneved"
         />
         <p id="login-error" class="login-error" aria-live="polite"></p>
         <button id="login-submit" type="submit" class="btn-primary">Folytatás</button>
@@ -114,16 +114,22 @@
           </div>
         </section>
 
-        <section class="setting setting-action">
-          <div class="setting-label">
-            <h3>Hibakeresés</h3>
-            <p>Debug napló és játékkönyvtár megnyitása.</p>
-          </div>
-          <div class="setting-control buttons">
-            <button id="open-log-btn" class="btn-ghost">Debug log</button>
-            <button id="open-dir-btn" class="btn-ghost">Játékkönyvtár</button>
-          </div>
-        </section>
+        <details class="advanced">
+          <summary class="advanced-toggle">
+            <span class="advanced-label">Haladó</span>
+            <span class="advanced-chevron" aria-hidden="true">›</span>
+          </summary>
+          <section class="setting setting-action">
+            <div class="setting-label">
+              <h3>Hibakeresés</h3>
+              <p>Debug napló és játékkönyvtár megnyitása.</p>
+            </div>
+            <div class="setting-control buttons">
+              <button id="open-log-btn" class="btn-ghost">Debug log</button>
+              <button id="open-dir-btn" class="btn-ghost">Játékkönyvtár</button>
+            </div>
+          </section>
+        </details>
       </div>
     </main>
   </section>

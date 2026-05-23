@@ -558,3 +558,57 @@ input[type="number"]:focus {
   from { transform: translateY(-12px); opacity: 0; }
   to   { transform: translateY(0); opacity: 1; }
 }
+
+/* ---------- Advanced (Haladó) collapsible section ---------- */
+.advanced {
+  margin-top: 8px;
+}
+.advanced > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--bg-3);
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  user-select: none;
+  transition: color 120ms, border-color 120ms, background 120ms;
+}
+.advanced > summary::-webkit-details-marker { display: none; }
+.advanced > summary:hover {
+  color: var(--accent-bright);
+  border-color: var(--accent-dim);
+}
+.advanced-chevron {
+  display: inline-block;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--text-dim);
+  transition: transform 180ms ease;
+}
+.advanced[open] > summary > .advanced-chevron {
+  transform: rotate(90deg);
+  color: var(--accent-bright);
+}
+.advanced[open] > summary {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom-color: transparent;
+}
+.advanced > .setting {
+  border-top: none;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  animation: advanced-in 180ms ease-out;
+}
+@keyframes advanced-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
