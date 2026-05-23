@@ -495,6 +495,10 @@ input[type="number"]:focus {
   pointer-events: none;
   animation: update-banner-in 220ms ease-out;
 }
+/* A `hidden` HTML attribútumot nem írja felül a fenti `display: flex`. */
+.update-banner[hidden],
+.update-progress-track[hidden],
+.update-action[hidden] { display: none; }
 .update-banner-inner {
   pointer-events: auto;
   display: flex;
