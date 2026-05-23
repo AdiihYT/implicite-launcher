@@ -25,7 +25,10 @@
       ],
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
-      "identity": null
+      "identity": null,
+      "extendInfo": {
+        "SQRLDisableCodeSigningVerification": true
+      }
     },
     "publish": {
       "provider": "github",
