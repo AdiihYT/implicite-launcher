@@ -11,6 +11,15 @@ contextBridge.exposeInMainWorld('launcher', {
   openDebugLog: () => ipcRenderer.invoke('open-debug-log'),
   openAppDir: () => ipcRenderer.invoke('open-app-dir'),
 
+  // Auto-updater
+  getUpdateStatus: () => ipcRenderer.invoke('get-update-status'),
+  installUpdate: () => ipcRenderer.invoke('install-update'),
+  openManualUpdate: () => ipcRenderer.invoke('open-manual-update'),
+  onUpdateStatus: (cb) => {
+    const listener = (_e, data) => cb(data);
+    ipcRenderer.on('update-status', listener);
+  },
+
   onProgress: (cb) => {
     const listener = (_e, data) => cb(data);
     ipcRenderer.on('progress', listener);

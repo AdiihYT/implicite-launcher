@@ -1,6 +1,6 @@
 {
   "name": "implicite-launcher",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Implicite Minecraft Launcher",
   "main": "main.js",
   "scripts": {
@@ -12,9 +12,18 @@
     "productName": "Implicite Launcher",
     "mac": {
       "category": "public.app-category.games",
-      "icon": "assets/icon.icns",
-      "target": "dmg",
-      "hardenedRuntime": false
+      "target": [
+        { "target": "dmg", "arch": "universal" },
+        { "target": "zip", "arch": "universal" }
+      ],
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "identity": null
+    },
+    "publish": {
+      "provider": "generic",
+      "url": "https://cdn.happylab.hu/implicite/releases/",
+      "channel": "latest"
     },
     "files": [
       "main.js",
@@ -27,5 +36,8 @@
   "devDependencies": {
     "electron": "^31.7.7",
     "electron-builder": "^24.0.0"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.3"
   }
 }

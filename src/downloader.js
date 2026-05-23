@@ -8,6 +8,11 @@ const logger = require('./logger');
 const USER_AGENT = 'Implicite-Launcher/1.0';
 const MAX_REDIRECTS = 8;
 
+// Retry policy: 3 próbálkozás, 500ms → 1500ms → 4500ms backoff. Csak
+// átmeneti hibákra (5xx, 408, 429, ECONNRESET stb.), 4xx-re nem.
+const RETRY_ATTEMPTS = 3;
+const RETRY_BASE_DELAY_MS = 500;
+
 function pickClient(urlString) {
   return urlString.startsWith('http://') ? http : https;
 }
@@ -23,14 +28,45 @@ function buildRequestOpts(urlString) {
   };
 }
 
-function fetchJSON(url, redirects = 0) {
+function isTransientError(err) {
+  const msg = err?.message || '';
+  const code = err?.code || '';
+  if (/HTTP 5\d\d/.test(msg)) return true;
+  if (/HTTP 408/.test(msg) || /HTTP 429/.test(msg)) return true;
+  if (code === 'ECONNRESET' || code === 'ETIMEDOUT' || code === 'ECONNREFUSED' ||
+      code === 'EAI_AGAIN'  || code === 'ENOTFOUND' || code === 'EPIPE') return true;
+  if (/socket hang up/i.test(msg)) return true;
+  return false;
+}
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function withRetry(fn, label) {
+  let lastErr;
+  for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (!isTransientError(err) || attempt === RETRY_ATTEMPTS) throw err;
+      const delay = RETRY_BASE_DELAY_MS * Math.pow(3, attempt - 1);
+      logger.warn(`RETRY ${label || ''}: ${err.message} – ${delay}ms múlva újra (${attempt + 1}/${RETRY_ATTEMPTS})`);
+      await sleep(delay);
+    }
+  }
+  throw lastErr;
+}
+
+function fetchJSONOnce(url, redirects = 0) {
   return new Promise((resolve, reject) => {
     if (redirects > MAX_REDIRECTS) return reject(new Error(`Túl sok redirect: ${url}`));
     const req = pickClient(url).request(buildRequestOpts(url), (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         res.resume();
         const next = new URL(res.headers.location, url).toString();
-        return fetchJSON(next, redirects + 1).then(resolve, reject);
+        return fetchJSONOnce(next, redirects + 1).then(resolve, reject);
       }
       if (res.statusCode !== 200) {
         res.resume();
@@ -51,14 +87,14 @@ function fetchJSON(url, redirects = 0) {
   });
 }
 
-function fetchBuffer(url, redirects = 0) {
+function fetchBufferOnce(url, redirects = 0) {
   return new Promise((resolve, reject) => {
     if (redirects > MAX_REDIRECTS) return reject(new Error(`Túl sok redirect: ${url}`));
     const req = pickClient(url).request(buildRequestOpts(url), (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         res.resume();
         const next = new URL(res.headers.location, url).toString();
-        return fetchBuffer(next, redirects + 1).then(resolve, reject);
+        return fetchBufferOnce(next, redirects + 1).then(resolve, reject);
       }
       if (res.statusCode !== 200) {
         res.resume();
@@ -73,7 +109,7 @@ function fetchBuffer(url, redirects = 0) {
   });
 }
 
-function downloadFile(url, dest, onProgress, redirects = 0) {
+function downloadFileOnce(url, dest, onProgress, redirects = 0) {
   return new Promise((resolve, reject) => {
     if (redirects > MAX_REDIRECTS) return reject(new Error(`Túl sok redirect: ${url}`));
     fs.mkdirSync(path.dirname(dest), { recursive: true });
@@ -83,7 +119,7 @@ function downloadFile(url, dest, onProgress, redirects = 0) {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         res.resume();
         const next = new URL(res.headers.location, url).toString();
-        return downloadFile(next, dest, onProgress, redirects + 1).then(resolve, reject);
+        return downloadFileOnce(next, dest, onProgress, redirects + 1).then(resolve, reject);
       }
       if (res.statusCode !== 200) {
         res.resume();
@@ -118,6 +154,18 @@ function downloadFile(url, dest, onProgress, redirects = 0) {
     });
     req.end();
   });
+}
+
+function fetchJSON(url) {
+  return withRetry(() => fetchJSONOnce(url), `fetchJSON ${url}`);
+}
+
+function fetchBuffer(url) {
+  return withRetry(() => fetchBufferOnce(url), `fetchBuffer ${url}`);
+}
+
+function downloadFile(url, dest, onProgress) {
+  return withRetry(() => downloadFileOnce(url, dest, onProgress), `downloadFile ${url}`);
 }
 
 async function downloadConcurrent(tasks, concurrency = 16) {

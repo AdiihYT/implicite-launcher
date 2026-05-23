@@ -32,7 +32,9 @@
 //  a vanilla LWJGL 2.9.x pipeline-on megy tovább.
 // =====================================================================
 
-const TANMAY_BASE = 'https://github.com/GreeniusGenius/m1-prism-launcher-hack-1.8.9/raw/master';
+// raw.githubusercontent.com közvetlenül (a github.com/.../raw/... 302 redirect-jét
+// kihagyjuk — a redirect edge szerver időnként 502-zik miközben a raw CDN működik).
+const TANMAY_BASE = 'https://raw.githubusercontent.com/GreeniusGenius/m1-prism-launcher-hack-1.8.9/master';
 
 const TANMAY_JARS = [
   { name: 'lwjglfat.jar',   relPath: 'org/lwjgl2compat/lwjglfat/2.9.4-tanmay/lwjglfat.jar',   url: `${TANMAY_BASE}/lwjglfat.jar` },

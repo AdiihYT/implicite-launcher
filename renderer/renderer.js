@@ -21,6 +21,12 @@ const keepOpenTgl  = document.getElementById('keepopen-toggle');
 const openLogBtn   = document.getElementById('open-log-btn');
 const openDirBtn   = document.getElementById('open-dir-btn');
 
+const updateBanner = document.getElementById('update-banner');
+const updateText   = document.getElementById('update-text');
+const updateAction = document.getElementById('update-action');
+const updateProgressTrack = document.querySelector('.update-progress-track');
+const updateProgressFill  = document.getElementById('update-progress-fill');
+
 // ---------- State ----------
 let currentSettings = null;
 let launchPhase = 'idle'; // 'idle' | 'launching' | 'running'
@@ -118,6 +124,51 @@ window.launcher.onGameStatus((data) => {
   if (data?.running) setPhase('running');
   else setPhase('idle');
 });
+
+// ---------- Auto-updater banner ----------
+function renderUpdateStatus(status) {
+  if (!status || status.state === 'idle') {
+    updateBanner.hidden = true;
+    return;
+  }
+
+  updateBanner.hidden = false;
+  updateAction.classList.remove('error-mode');
+
+  if (status.state === 'checking') {
+    updateText.textContent = 'Frissítés ellenőrzése...';
+    updateProgressTrack.hidden = true;
+    updateAction.hidden = true;
+  } else if (status.state === 'downloading') {
+    const pct = Math.round((status.progress || 0) * 100);
+    updateText.textContent = `Frissítés letöltése${status.version ? ` v${status.version}` : ''} – ${pct}%`;
+    updateProgressTrack.hidden = false;
+    updateProgressFill.style.width = `${pct}%`;
+    updateAction.hidden = true;
+  } else if (status.state === 'ready') {
+    updateText.textContent = `Frissítés készen áll${status.version ? ` (v${status.version})` : ''}`;
+    updateProgressTrack.hidden = true;
+    updateAction.hidden = false;
+    updateAction.textContent = 'Újraindítás';
+    updateAction.onclick = async () => {
+      updateAction.disabled = true;
+      await window.launcher.installUpdate();
+    };
+  } else if (status.state === 'error') {
+    updateText.textContent = 'Auto-frissítés sikertelen';
+    updateProgressTrack.hidden = true;
+    updateAction.hidden = false;
+    updateAction.textContent = 'Letöltés kézzel';
+    updateAction.classList.add('error-mode');
+    updateAction.onclick = () => window.launcher.openManualUpdate();
+  }
+}
+
+window.launcher.onUpdateStatus(renderUpdateStatus);
+(async () => {
+  const initial = await window.launcher.getUpdateStatus();
+  renderUpdateStatus(initial);
+})();
 
 // ---------- Login flow ----------
 loginInput.addEventListener('input', () => {

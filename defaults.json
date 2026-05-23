@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "id": "config-v1",
+      "type": "zip",
+      "dest": "config/",
+      "url": "https://cdn.happylab.hu/implicite/defaults/config.zip",
+      "size": 6562,
+      "sha256": "f47b6b8770cb3c7759a8447d83e99fc9ddf6ea9e4894e415aab5ee086a829cc1"
+    },
+    {
+      "id": "oneconfig-v1",
+      "type": "zip",
+      "dest": "OneConfig/",
+      "url": "https://cdn.happylab.hu/implicite/defaults/oneconfig.zip",
+      "size": 17222110,
+      "sha256": "bdd82b4723b381d42c5d0deaa962318dae6ac8a3f188aaf6fce8a74ce14b39f7"
+    },
+    {
+      "id": "options-v1",
+      "type": "file",
+      "dest": "options.txt",
+      "url": "https://cdn.happylab.hu/implicite/defaults/options.txt",
+      "size": 2415,
+      "sha256": "285802f24c0853a782d1de2c51fa1a62b502e3172c92e2249f66a34ffe282ffa"
+    },
+    {
+      "id": "optionsof-v1",
+      "type": "file",
+      "dest": "optionsof.txt",
+      "url": "https://cdn.happylab.hu/implicite/defaults/optionsof.txt",
+      "size": 1362,
+      "sha256": "c02b7d18124d497daa477bd1a0afe56a281298e6ece93b0d8a57b48d87f092d9"
+    },
+    {
+      "id": "resourcepacks-v1",
+      "type": "zip",
+      "dest": "resourcepacks/",
+      "url": "https://cdn.happylab.hu/implicite/defaults/resourcepacks.zip",
+      "size": 36497315,
+      "sha256": "1dfc63990979aed1db0cded3af0cd7610c0a78cd10ce29ba8558060fdd188354"
+    }
+  ]
+}

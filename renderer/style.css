@@ -482,3 +482,75 @@ input[type="number"]:focus {
   color: var(--accent-bright);
   border-color: var(--accent-dim);
 }
+
+/* ---------- Update banner ---------- */
+.update-banner {
+  position: fixed;
+  top: 28px;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  animation: update-banner-in 220ms ease-out;
+}
+.update-banner-inner {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  background: rgba(0, 168, 239, 0.12);
+  border: 1px solid var(--accent-dim);
+  border-radius: 999px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 20px var(--accent-glow);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent-bright);
+  max-width: 80%;
+}
+.update-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.update-progress-track {
+  width: 120px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.update-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-bright));
+  box-shadow: 0 0 8px var(--accent-glow);
+  transition: width 200ms ease-out;
+}
+.update-action {
+  padding: 4px 10px;
+  background: linear-gradient(180deg, var(--accent-bright), var(--accent));
+  border: none;
+  border-radius: 999px;
+  color: #00131f;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: filter 120ms;
+}
+.update-action:hover { filter: brightness(1.08); }
+.update-action.error-mode {
+  background: rgba(255, 100, 100, 0.15);
+  color: #ff9a9a;
+  border: 1px solid rgba(255, 100, 100, 0.4);
+}
+@keyframes update-banner-in {
+  from { transform: translateY(-12px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}

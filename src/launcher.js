@@ -8,6 +8,7 @@ const logger = require('./logger');
 const { fetchJSON, downloadFile, downloadConcurrent } = require('./downloader');
 const lwjgl = require('./lwjgl');
 const forge = require('./forge');
+const defaults = require('./defaults');
 
 // ----- útvonalak ---------------------------------------------------
 const APP_DIR     = logger.APP_DIR;
@@ -279,9 +280,15 @@ async function ensureAssets(versionJson, onStatus, onProgress) {
   const index = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
   const objects = index.objects || {};
 
+  // A vanilla asset index-ben több név mutathat ugyanarra a hash-re
+  // (azonos tartalom). Hash-szel dedupolunk, hogy ne legyen race ugyanazon
+  // .tmp fájlra a 16-os worker-pool-ban (rename ENOENT warning).
+  const seenHashes = new Set();
   const tasks = [];
-  for (const [name, info] of Object.entries(objects)) {
+  for (const info of Object.values(objects)) {
     const hash = info.hash;
+    if (seenHashes.has(hash)) continue;
+    seenHashes.add(hash);
     const prefix = hash.slice(0, 2);
     const dest = path.join(objectsDir, prefix, hash);
     if (fs.existsSync(dest) && fs.statSync(dest).size === info.size) continue;
@@ -502,6 +509,16 @@ async function ensureMods(onStatus, onProgress) {
 // =====================================================================
 async function launch({ username, ram, onStatus, onProgress }) {
   ensureMcDirs();
+
+  // Defaults a useVbo enforcement ELŐTT: ha a CDN-es options.txt most kerül
+  // először a helyére, a useVbo:true sor utána még biztosan rákerül arm64-en.
+  await defaults.ensureFirstRunDefaults({
+    appDir:   APP_DIR,
+    mcDir:    MC_DIR,
+    cacheDir: CACHE_DIR,
+    onStatus,
+  });
+
   ensureVboOptionForMacArm64();
 
   const javaPath = await ensureJava8(onStatus, onProgress);

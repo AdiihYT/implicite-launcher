@@ -6,6 +6,11 @@ let mainWindow = null;
 let mcProcess = null;
 let launcher = null;
 
+// Auto-updater state — csak packaged build-ben aktív (dev-ben `app.isPackaged`
+// false, ott electron-updater nem fut le).
+let autoUpdater = null;
+let latestUpdateState = { state: 'idle' };
+
 function bringToFront() {
   if (!mainWindow) return;
   if (mainWindow.isMinimized()) mainWindow.restore();
@@ -135,6 +140,68 @@ function attachMcLifecycle(mc) {
   });
 }
 
+function sendUpdateStatus(state) {
+  latestUpdateState = state;
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('update-status', state);
+  }
+}
+
+function setupAutoUpdater() {
+  if (!app.isPackaged) {
+    logger.info('UPDATER: dev mode (nem packaged), kihagyás');
+    return;
+  }
+
+  try {
+    autoUpdater = require('electron-updater').autoUpdater;
+  } catch (e) {
+    logger.warn(`UPDATER: electron-updater betöltés hiba – ${e.message}`);
+    return;
+  }
+
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = false;
+  autoUpdater.logger = {
+    info:  (m) => logger.info(`UPDATER: ${m}`),
+    warn:  (m) => logger.warn(`UPDATER: ${m}`),
+    error: (m) => logger.error(`UPDATER: ${m}`),
+    debug: () => {},
+  };
+
+  autoUpdater.on('checking-for-update', () => {
+    sendUpdateStatus({ state: 'checking' });
+  });
+  autoUpdater.on('update-available', (info) => {
+    sendUpdateStatus({ state: 'downloading', version: info.version, progress: 0 });
+  });
+  autoUpdater.on('update-not-available', () => {
+    sendUpdateStatus({ state: 'idle' });
+  });
+  autoUpdater.on('download-progress', (p) => {
+    sendUpdateStatus({ state: 'downloading', progress: p.percent / 100 });
+  });
+  autoUpdater.on('update-downloaded', (info) => {
+    sendUpdateStatus({ state: 'ready', version: info.version });
+  });
+  autoUpdater.on('error', (err) => {
+    logger.warn(`UPDATER: error – ${err.message}`);
+    // Fallback URL: a felhasználó manuálisan tudja letölteni a legfrissebb DMG-t.
+    sendUpdateStatus({
+      state: 'error',
+      error: err.message,
+      manualUrl: 'https://cdn.happylab.hu/implicite/releases/',
+    });
+  });
+
+  // 3s késleltetéssel indul a check, hogy a UI ne lassuljon az induláskor.
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch((e) => {
+      logger.warn(`UPDATER: checkForUpdates failed – ${e.message}`);
+    });
+  }, 3000);
+}
+
 function registerIpc() {
   ipcMain.handle('get-settings', () => launcher.getSettings());
 
@@ -147,6 +214,21 @@ function registerIpc() {
 
   ipcMain.handle('open-debug-log', () => shell.openPath(logger.LOG_FILE));
   ipcMain.handle('open-app-dir', () => shell.openPath(logger.APP_DIR));
+
+  ipcMain.handle('get-update-status', () => latestUpdateState);
+  ipcMain.handle('install-update', () => {
+    if (!autoUpdater) return { success: false, error: 'updater inaktív (dev mode)' };
+    if (latestUpdateState.state !== 'ready') {
+      return { success: false, error: 'nincs telepítésre kész frissítés' };
+    }
+    logger.info('UPDATER: quitAndInstall hívva');
+    setImmediate(() => autoUpdater.quitAndInstall(false, true));
+    return { success: true };
+  });
+
+  ipcMain.handle('open-manual-update', () => {
+    shell.openExternal('https://cdn.happylab.hu/implicite/releases/');
+  });
 
   ipcMain.handle('force-kill', () => {
     if (!mcProcess || mcProcess.killed) return { success: true };
@@ -213,6 +295,7 @@ if (!app.requestSingleInstanceLock()) {
 
     registerIpc();
     createWindow();
+    setupAutoUpdater();
   });
 
   app.on('window-all-closed', () => {
