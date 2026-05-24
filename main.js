@@ -238,7 +238,7 @@ function registerIpc() {
       return { success: false, error: 'nincs telepítésre kész frissítés' };
     }
     logger.info('UPDATER: quitAndInstall hívva');
-    setImmediate(() => autoUpdater.quitAndInstall(false, true));
+    setImmediate(() => autoUpdater.quitAndInstall(true, true));
     return { success: true };
   });
 
