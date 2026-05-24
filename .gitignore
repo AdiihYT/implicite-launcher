@@ -11,7 +11,9 @@ pnpm-debug.log*
 # ===== Electron build output =====
 dist/
 out/
-build/
+build/*
+!build/icon.icns
+!build/icon.ico
 release/
 app/
 *.dmg
