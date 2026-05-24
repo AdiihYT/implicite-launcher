@@ -71,6 +71,27 @@ function clampRam(value, maxRam) {
   return v;
 }
 
+// Vanilla MC alapérték (--width / --height default a `--server` nélküli launcherben).
+const DEFAULT_RESOLUTION = { width: 854, height: 480 };
+const RES_MIN = { width: 320, height: 240 };
+const RES_MAX = { width: 7680, height: 4320 };
+
+function clampInt(v, min, max, fallback) {
+  const n = parseInt(v, 10);
+  if (!Number.isFinite(n)) return fallback;
+  if (n < min) return min;
+  if (n > max) return max;
+  return n;
+}
+
+function normalizeResolution(value) {
+  if (!value || typeof value !== 'object') return { ...DEFAULT_RESOLUTION };
+  return {
+    width:  clampInt(value.width,  RES_MIN.width,  RES_MAX.width,  DEFAULT_RESOLUTION.width),
+    height: clampInt(value.height, RES_MIN.height, RES_MAX.height, DEFAULT_RESOLUTION.height),
+  };
+}
+
 function getSettings() {
   const cfg = getConfig();
   const maxRam = computeMaxRamGB();
@@ -79,6 +100,9 @@ function getSettings() {
     ram:              clampRam(cfg.ram, maxRam),
     maxRam,
     keepLauncherOpen: !!cfg.keepLauncherOpen,
+    resolution:       normalizeResolution(cfg.resolution),
+    fullscreen:       !!cfg.fullscreen,
+    lockAspectRatio:  !!cfg.lockAspectRatio,
   };
 }
 
@@ -86,11 +110,15 @@ function saveSettings(settings) {
   const current = getConfig();
   const maxRam = computeMaxRamGB();
   const incomingRam = typeof settings.ram === 'number' ? settings.ram : current.ram;
+  const incomingRes = settings.resolution !== undefined ? settings.resolution : current.resolution;
   const next = {
     ...current,
     username:         settings.username ?? null,
     ram:              clampRam(incomingRam, maxRam),
     keepLauncherOpen: !!settings.keepLauncherOpen,
+    resolution:       normalizeResolution(incomingRes),
+    fullscreen:       !!settings.fullscreen,
+    lockAspectRatio:  !!settings.lockAspectRatio,
   };
   saveConfig(next);
 }
@@ -540,7 +568,7 @@ async function ensureMods(onStatus, onProgress) {
 // =====================================================================
 //  Fő launch pipeline
 // =====================================================================
-async function launch({ username, ram, onStatus, onProgress }) {
+async function launch({ username, ram, resolution, fullscreen, onStatus, onProgress }) {
   ensureMcDirs();
 
   // Defaults a useVbo enforcement ELŐTT: ha a CDN-es options.txt most kerül
@@ -734,6 +762,13 @@ async function launch({ username, ram, onStatus, onProgress }) {
     || '';
   const gameArgs = forge.parseLegacyMinecraftArguments(gameArgsRaw)
     .map((a) => replaceAll(a, replacements));
+
+  // Felbontás + fullscreen — vanilla MC `--width / --height / --fullscreen` flagek.
+  // A legacy minecraftArguments-ben nincs felbontás placeholder, ezért egyszerűen
+  // hozzáfűzzük a végéhez.
+  const res = normalizeResolution(resolution);
+  gameArgs.push('--width', String(res.width), '--height', String(res.height));
+  if (fullscreen) gameArgs.push('--fullscreen');
 
   const xms = ram > 2 ? '1G' : '512M';
   const jvmArgs = [];

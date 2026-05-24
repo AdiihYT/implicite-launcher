@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Menu, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, shell, screen } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const logger = require('./src/logger');
@@ -246,6 +246,78 @@ function registerIpc() {
     shell.openExternal('https://github.com/AdiihYT/implicite-launcher/releases/latest');
   });
 
+  ipcMain.handle('get-display-info', () => {
+    const primary = screen.getPrimaryDisplay();
+    return {
+      width:  primary.size.width,
+      height: primary.size.height,
+      scaleFactor: primary.scaleFactor || 1,
+    };
+  });
+
+  // Átmeneti, átlátszó overlay ablak a megadott felbontással, középre helyezve.
+  // ~2.5 másodperc után automatikusan bezáródik. A felhasználó így vizuálisan
+  // látja, mekkora terület lesz a játék ablaka az adott felbontáson.
+  ipcMain.handle('visualize-resolution', (_e, payload) => {
+    const w = Math.max(120, Math.min(7680, parseInt(payload?.width,  10) || 0));
+    const h = Math.max(120, Math.min(4320, parseInt(payload?.height, 10) || 0));
+    if (!w || !h) return { success: false };
+
+    const primary = screen.getPrimaryDisplay().workArea;
+    // Ha a kért méret nagyobb a látható területnél, scale-eljük arányosan, hogy
+    // ne lógjon ki — a label továbbra is a kért W×H-t mutatja.
+    const scale = Math.min(1, primary.width  / w, primary.height / h);
+    const winW = Math.round(w * scale);
+    const winH = Math.round(h * scale);
+
+    const overlay = new BrowserWindow({
+      width:  winW,
+      height: winH,
+      x: primary.x + Math.round((primary.width  - winW) / 2),
+      y: primary.y + Math.round((primary.height - winH) / 2),
+      frame: false,
+      transparent: true,
+      resizable: false,
+      movable: false,
+      focusable: false,
+      skipTaskbar: true,
+      alwaysOnTop: true,
+      hasShadow: false,
+      show: false,
+      webPreferences: { contextIsolation: true, nodeIntegration: false },
+    });
+    overlay.setIgnoreMouseEvents(true);
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+      html,body{margin:0;padding:0;height:100%;width:100%;
+        font-family:'Bricolage Grotesque',system-ui,-apple-system,sans-serif;
+        color:#E8EEF6;background:transparent;overflow:hidden;}
+      .frame{position:absolute;inset:0;
+        border:3px solid #33BCFF;border-radius:10px;
+        background:rgba(5,8,17,0.42);
+        box-shadow:0 0 0 1px rgba(0,168,239,0.4) inset, 0 0 48px rgba(0,168,239,0.45);
+        animation:fade 2500ms ease-out forwards;}
+      .label{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+        font-size:clamp(18px, 8vw, 96px);font-weight:800;letter-spacing:-0.02em;
+        text-shadow:0 0 28px rgba(0,168,239,0.6);
+        background:linear-gradient(180deg,#33BCFF,#00A8EF);
+        -webkit-background-clip:text;background-clip:text;color:transparent;}
+      .sub{position:absolute;left:50%;top:calc(50% + 8vw + 6px);transform:translateX(-50%);
+        font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;
+        letter-spacing:0.08em;text-transform:uppercase;color:#9CAAC2;}
+      @keyframes fade{0%{opacity:0}10%{opacity:1}80%{opacity:1}100%{opacity:0}}
+    </style></head><body>
+      <div class="frame">
+        <div class="label">${w} × ${h}</div>
+        <div class="sub">Felbontás előnézet</div>
+      </div></body></html>`;
+    overlay.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+    overlay.once('ready-to-show', () => overlay.showInactive());
+    setTimeout(() => { if (!overlay.isDestroyed()) overlay.close(); }, 2500);
+
+    return { success: true };
+  });
+
   ipcMain.handle('force-kill', () => {
     if (!mcProcess || mcProcess.killed) return { success: true };
     logger.warn(`GAME: kényszerleállítás – PID=${mcProcess.pid}`);
@@ -285,6 +357,8 @@ function registerIpc() {
       const mc = await launcher.launch({
         username,
         ram: settings.ram || 4,
+        resolution: settings.resolution,
+        fullscreen: settings.fullscreen,
         onStatus: (message) => send('status', { message }),
         onProgress: (label, value) => send('progress', { label, value }),
       });

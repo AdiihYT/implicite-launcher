@@ -520,6 +520,253 @@ input[type="number"]:focus {
   border-color: var(--accent-dim);
 }
 
+/* ---------- Vertical block setting (Felbontás) ---------- */
+.setting-block {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 24px;
+  background: rgba(18, 26, 43, 0.72);
+  border: 1px solid rgba(30, 42, 66, 0.7);
+  border-radius: 12px;
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  /* A backdrop-filter saját stacking contextet csinál — explicit z-index nélkül
+     a következő testvérek (Frissítések / Haladó) felülfestenék a preset menüt. */
+  position: relative;
+  z-index: 5;
+}
+
+.block-head { display: flex; flex-direction: column; gap: 4px; }
+.block-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.block-title h3 {
+  font-size: 14px;
+  font-weight: 600;
+  flex: 1;
+}
+.block-icon {
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+.block-sub {
+  font-size: 12px;
+  color: var(--text-mute);
+}
+
+.icon-btn {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: color 120ms, background 120ms, border-color 120ms;
+}
+.icon-btn:hover {
+  color: var(--accent-bright);
+  background: var(--bg-3);
+  border-color: var(--border-2);
+}
+
+/* Resolution input row */
+.res-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-0);
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  width: max-content;
+  max-width: 100%;
+}
+.res-prefix {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.res-x {
+  color: var(--text-mute);
+  font-size: 13px;
+  padding: 0 2px;
+}
+.res-input input[type="number"] {
+  width: 64px;
+  padding: 4px 6px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  outline: none;
+  -moz-appearance: textfield;
+}
+.res-input input[type="number"]::-webkit-outer-spin-button,
+.res-input input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.res-input input[type="number"]:focus {
+  box-shadow: none;
+  color: var(--accent-bright);
+}
+
+/* Actions row (Preset / Visualise) */
+.res-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.res-actions-label {
+  font-size: 12px;
+  color: var(--text-mute);
+  letter-spacing: 0.03em;
+}
+.res-actions-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.btn-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  background: var(--bg-3);
+  border: 1px solid var(--border-2);
+  border-radius: 999px;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 120ms;
+}
+.btn-pill:hover {
+  color: var(--accent-bright);
+  border-color: var(--accent-dim);
+  background: var(--bg-2);
+}
+.btn-pill svg { flex-shrink: 0; }
+
+/* Preset dropdown */
+.preset-wrapper { position: relative; }
+.preset-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 200px;
+  background: rgba(18, 26, 43, 0.96);
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  padding: 6px;
+  box-shadow: var(--shadow-1);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  z-index: 50;
+  animation: preset-in 140ms ease-out;
+}
+.preset-menu[hidden] { display: none; }
+@keyframes preset-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.preset-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 100ms, color 100ms;
+}
+.preset-item:hover {
+  background: var(--bg-3);
+  color: var(--text);
+}
+.preset-item .preset-dim {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-mute);
+}
+.preset-item:hover .preset-dim { color: var(--accent-bright); }
+
+/* Toggle rows (Fullscreen / Aspect lock) */
+.res-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 2px;
+}
+.check-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  width: max-content;
+}
+.check-row input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.check-mark {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--border-2);
+  border-radius: 5px;
+  background: var(--bg-0);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 120ms, border-color 120ms;
+  flex-shrink: 0;
+}
+.check-mark::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--accent-bright);
+  box-shadow: 0 0 8px var(--accent-glow);
+  transform: scale(0);
+  transition: transform 140ms cubic-bezier(.5,1.6,.6,1);
+}
+.check-row input:checked + .check-mark { border-color: var(--accent); }
+.check-row input:checked + .check-mark::after { transform: scale(1); }
+.check-row:hover .check-mark { border-color: var(--accent-dim); }
+.check-label {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.check-row:hover .check-label,
+.check-row input:checked ~ .check-label {
+  color: var(--text);
+}
+
 /* ---------- Update section (Settings panel) ---------- */
 .version-chip {
   display: inline-block;

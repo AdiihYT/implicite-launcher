@@ -13,6 +13,10 @@ contextBridge.exposeInMainWorld('launcher', {
   openDebugLog: () => ipcRenderer.invoke('open-debug-log'),
   openAppDir: () => ipcRenderer.invoke('open-app-dir'),
 
+  // Felbontás funkciók (Beállítások → Felbontás)
+  getDisplayInfo: () => ipcRenderer.invoke('get-display-info'),
+  visualizeResolution: (size) => ipcRenderer.invoke('visualize-resolution', size),
+
   // Window controls (frameless platformok)
   windowMinimize: () => ipcRenderer.invoke('window-minimize'),
   windowClose:    () => ipcRenderer.invoke('window-close'),

@@ -32,6 +32,15 @@ const keepOpenTgl  = document.getElementById('keepopen-toggle');
 const openLogBtn   = document.getElementById('open-log-btn');
 const openDirBtn   = document.getElementById('open-dir-btn');
 
+const resWidthInput    = document.getElementById('res-width');
+const resHeightInput   = document.getElementById('res-height');
+const resResetBtn      = document.getElementById('resolution-reset');
+const resPresetBtn     = document.getElementById('resolution-preset-btn');
+const resPresetMenu    = document.getElementById('resolution-preset-menu');
+const resVisualiseBtn  = document.getElementById('resolution-visualise');
+const fullscreenTgl    = document.getElementById('fullscreen-toggle');
+const aspectLockTgl    = document.getElementById('aspect-lock-toggle');
+
 const currentVersionEl   = document.getElementById('current-version');
 const updateStatusText   = document.getElementById('update-status-text');
 const updateProgressRow  = document.getElementById('update-progress-row');
@@ -71,6 +80,10 @@ function showTab(name) {
 }
 
 // ---------- Settings ----------
+// Vanilla MC default — egyezzen a launcher.js-beli DEFAULT_RESOLUTION-nel.
+const DEFAULT_RES = { width: 854, height: 480 };
+const RES_LIMITS = { wMin: 320, wMax: 7680, hMin: 240, hMax: 4320 };
+
 async function loadSettings() {
   currentSettings = await window.launcher.getSettings();
   const maxRam = typeof currentSettings.maxRam === 'number' && currentSettings.maxRam >= 1
@@ -81,16 +94,115 @@ async function loadSettings() {
   ramValue.textContent = `${ramSlider.value} GB`;
   keepOpenTgl.checked = !!currentSettings.keepLauncherOpen;
   if (currentSettings.username) userNameEl.textContent = currentSettings.username;
+
+  // Felbontás panel — programatikusan állítjuk, aspect-lock listener-t blokkoljuk.
+  const res = currentSettings.resolution || DEFAULT_RES;
+  setResolutionInputs(res.width, res.height);
+  fullscreenTgl.checked = !!currentSettings.fullscreen;
+  aspectLockTgl.checked = !!currentSettings.lockAspectRatio;
 }
 
 async function saveCurrentSettings() {
-  await window.launcher.saveSettings({
+  const payload = {
     username:         currentSettings.username,
     ram:              parseInt(ramSlider.value, 10),
     keepLauncherOpen: keepOpenTgl.checked,
+    resolution:       readResolutionInputs(),
+    fullscreen:       fullscreenTgl.checked,
+    lockAspectRatio:  aspectLockTgl.checked,
+  };
+  await window.launcher.saveSettings(payload);
+  Object.assign(currentSettings, {
+    ram: payload.ram,
+    keepLauncherOpen: payload.keepLauncherOpen,
+    resolution: payload.resolution,
+    fullscreen: payload.fullscreen,
+    lockAspectRatio: payload.lockAspectRatio,
   });
-  currentSettings.ram = parseInt(ramSlider.value, 10);
-  currentSettings.keepLauncherOpen = keepOpenTgl.checked;
+}
+
+// ---------- Resolution helpers ----------
+let suppressAspectSync = false;
+
+function clampInt(v, min, max, fallback) {
+  const n = parseInt(v, 10);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, n));
+}
+
+function setResolutionInputs(w, h) {
+  suppressAspectSync = true;
+  resWidthInput.value  = String(clampInt(w, RES_LIMITS.wMin, RES_LIMITS.wMax, DEFAULT_RES.width));
+  resHeightInput.value = String(clampInt(h, RES_LIMITS.hMin, RES_LIMITS.hMax, DEFAULT_RES.height));
+  suppressAspectSync = false;
+}
+
+function readResolutionInputs() {
+  return {
+    width:  clampInt(resWidthInput.value,  RES_LIMITS.wMin, RES_LIMITS.wMax, DEFAULT_RES.width),
+    height: clampInt(resHeightInput.value, RES_LIMITS.hMin, RES_LIMITS.hMax, DEFAULT_RES.height),
+  };
+}
+
+const RES_PRESETS = [
+  { label: 'Minecraft alap',  width: 854,  height: 480  },
+  { label: 'HD 720p',         width: 1280, height: 720  },
+  { label: 'HD+ 900p',        width: 1600, height: 900  },
+  { label: 'Full HD 1080p',   width: 1920, height: 1080 },
+  { label: 'QHD 1440p',       width: 2560, height: 1440 },
+  { label: 'UHD 4K',          width: 3840, height: 2160 },
+];
+
+async function openPresetMenu() {
+  resPresetMenu.innerHTML = '';
+
+  // "Képernyő natív" — a primary display fizikai felbontása.
+  let nativeEntry = null;
+  try {
+    const info = await window.launcher.getDisplayInfo();
+    if (info?.width && info?.height) {
+      nativeEntry = { label: 'Képernyő natív', width: info.width, height: info.height };
+    }
+  } catch {}
+
+  const items = nativeEntry ? [nativeEntry, ...RES_PRESETS] : [...RES_PRESETS];
+  for (const p of items) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'preset-item';
+    btn.innerHTML = `<span>${p.label}</span><span class="preset-dim">${p.width} × ${p.height}</span>`;
+    btn.addEventListener('click', () => {
+      setResolutionInputs(p.width, p.height);
+      closePresetMenu();
+      saveCurrentSettings();
+    });
+    resPresetMenu.appendChild(btn);
+  }
+  resPresetMenu.hidden = false;
+}
+
+function closePresetMenu() {
+  resPresetMenu.hidden = true;
+}
+
+function applyAspectLock(changedSide) {
+  if (suppressAspectSync) return;
+  if (!aspectLockTgl.checked) return;
+  // A rögzítendő arány: a NEM most módosított oldal alapján számoljuk vissza,
+  // hogy a felhasználó által épp gépelt számot ne írjuk felül.
+  const ref = currentSettings?.resolution || DEFAULT_RES;
+  const ratio = ref.width / ref.height;
+  suppressAspectSync = true;
+  if (changedSide === 'width') {
+    const w = clampInt(resWidthInput.value, RES_LIMITS.wMin, RES_LIMITS.wMax, DEFAULT_RES.width);
+    const h = clampInt(Math.round(w / ratio), RES_LIMITS.hMin, RES_LIMITS.hMax, DEFAULT_RES.height);
+    resHeightInput.value = String(h);
+  } else {
+    const h = clampInt(resHeightInput.value, RES_LIMITS.hMin, RES_LIMITS.hMax, DEFAULT_RES.height);
+    const w = clampInt(Math.round(h * ratio), RES_LIMITS.wMin, RES_LIMITS.wMax, DEFAULT_RES.width);
+    resWidthInput.value = String(w);
+  }
+  suppressAspectSync = false;
 }
 
 // ---------- Launch state ----------
@@ -277,6 +389,54 @@ keepOpenTgl.addEventListener('change', saveCurrentSettings);
 
 openLogBtn.addEventListener('click', () => window.launcher.openDebugLog());
 openDirBtn.addEventListener('click', () => window.launcher.openAppDir());
+
+// ---------- Resolution controls ----------
+resWidthInput.addEventListener('input', () => applyAspectLock('width'));
+resHeightInput.addEventListener('input', () => applyAspectLock('height'));
+// Mentés blur/change-re, hogy a gépelés közbeni minden köztes érték ne flusholjon a diszkre.
+resWidthInput.addEventListener('change', saveCurrentSettings);
+resHeightInput.addEventListener('change', saveCurrentSettings);
+
+resResetBtn.addEventListener('click', () => {
+  setResolutionInputs(DEFAULT_RES.width, DEFAULT_RES.height);
+  saveCurrentSettings();
+});
+
+fullscreenTgl.addEventListener('change', saveCurrentSettings);
+aspectLockTgl.addEventListener('change', () => {
+  // Aspect-lock bekapcsolásakor a JELENLEGI érték adja a referencia-arányt —
+  // ezt a currentSettings.resolution-be is beírjuk, hogy az applyAspectLock
+  // ne egy elavult arányból számoljon.
+  if (aspectLockTgl.checked) {
+    currentSettings.resolution = readResolutionInputs();
+  }
+  saveCurrentSettings();
+});
+
+resPresetBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (resPresetMenu.hidden) openPresetMenu();
+  else closePresetMenu();
+});
+document.addEventListener('click', (e) => {
+  if (resPresetMenu.hidden) return;
+  if (e.target === resPresetBtn || resPresetBtn.contains(e.target)) return;
+  if (resPresetMenu.contains(e.target)) return;
+  closePresetMenu();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !resPresetMenu.hidden) closePresetMenu();
+});
+
+resVisualiseBtn.addEventListener('click', async () => {
+  const size = readResolutionInputs();
+  resVisualiseBtn.disabled = true;
+  try {
+    await window.launcher.visualizeResolution(size);
+  } finally {
+    setTimeout(() => { resVisualiseBtn.disabled = false; }, 2500);
+  }
+});
 
 // ---------- Boot ----------
 (async function init() {
