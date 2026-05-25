@@ -10,6 +10,7 @@ const lwjgl = require('./lwjgl');
 const forge = require('./forge');
 const defaults = require('./defaults');
 const zip = require('./zip');
+const cdn = require('./cdn');
 
 // ----- útvonalak ---------------------------------------------------
 const APP_DIR     = logger.APP_DIR;
@@ -24,7 +25,6 @@ const ASSETS_DIR    = path.join(MC_DIR, 'assets');
 const NATIVES_DIR   = path.join(MC_DIR, 'natives', '1.8.9');
 
 const MC_VERSION = '1.8.9';
-const VERSION_MANIFEST_URL = 'https://launchermeta.mojang.com/mc/game/version_manifest.json';
 const MODS_MANIFEST_URL = 'https://cdn.happylab.hu/implicite/mods/mods.json';
 const MODS_DIR = path.join(MC_DIR, 'mods');
 
@@ -195,33 +195,14 @@ async function ensureJava8(onStatus, onProgress) {
     return existing;
   }
 
-  // Platform-specifikus Zulu paraméterek
   const isWin = process.platform === 'win32';
-  const isMac = process.platform === 'darwin';
-  const arch = isWin
-    ? 'x64'
-    : (process.arch === 'arm64' ? 'aarch64' : 'x64');
-  const zuluOs = isWin ? 'windows' : (isMac ? 'macos' : 'linux');
   const archiveType = isWin ? 'zip' : 'tar.gz';
+  const javaUrl = cdn.getJavaUrl();
+  const archivePath = path.join(CACHE_DIR, `jre8-${process.arch}.${archiveType}`);
 
-  const apiUrl = `https://api.azul.com/metadata/v1/zulu/packages/`
-    + `?java_version=8&os=${zuluOs}&arch=${arch}`
-    + `&archive_type=${archiveType}&java_package_type=jre&javafx_bundled=false`
-    + `&latest=true&release_status=ga`;
-
-  onStatus?.('Java előkészítése...');
-  logger.info(`JAVA: Azul Zulu API – ${apiUrl}`);
-  const meta = await fetchJSON(apiUrl);
-  if (!Array.isArray(meta) || !meta.length) {
-    throw new Error('Azul Zulu API: üres válasz, Java 8 nem található.');
-  }
-  const pkg = meta[0];
-  if (!pkg?.download_url) throw new Error('Azul Zulu API: hiányzó download_url');
-  logger.info(`JAVA: package – ${pkg.name}`);
-
-  const archivePath = path.join(CACHE_DIR, `jre8-${arch}.${archiveType}`);
   onStatus?.('Java letöltése...');
-  await downloadFile(pkg.download_url, archivePath, (p) => onProgress?.('Java letöltése', p));
+  logger.info(`JAVA: CDN letöltés – ${javaUrl}`);
+  await downloadFile(javaUrl, archivePath, (p) => onProgress?.('Java letöltése', p));
 
   onStatus?.('Java telepítése...');
   if (isWin) {
@@ -245,6 +226,8 @@ async function ensureJava8(onStatus, onProgress) {
 }
 
 // ----- vanilla 1.8.9 version JSON ----------------------------------
+// Közvetlenül a CDN-tükörről jön, a Mojang version_manifest.json-t
+// kihagyjuk (egy fetch-csel kevesebb, kevesebb támadási felület).
 async function getVanillaVersionJson(onStatus) {
   const cacheDir = path.join(VERSIONS_DIR, MC_VERSION);
   fs.mkdirSync(cacheDir, { recursive: true });
@@ -253,10 +236,7 @@ async function getVanillaVersionJson(onStatus) {
     try { return JSON.parse(fs.readFileSync(cached, 'utf8')); } catch {}
   }
   onStatus?.('Minecraft adatok lekérése...');
-  const manifest = await fetchJSON(VERSION_MANIFEST_URL);
-  const entry = (manifest.versions || []).find((v) => v.id === MC_VERSION);
-  if (!entry) throw new Error('1.8.9 nem található a Mojang version manifestben.');
-  const json = await fetchJSON(entry.url);
+  const json = await fetchJSON(cdn.URLS.vanillaVersionJson);
   fs.writeFileSync(cached, JSON.stringify(json, null, 2));
   return json;
 }
@@ -363,7 +343,7 @@ async function ensureAssets(versionJson, onStatus, onProgress) {
     const prefix = hash.slice(0, 2);
     const dest = path.join(objectsDir, prefix, hash);
     if (fs.existsSync(dest) && fs.statSync(dest).size === info.size) continue;
-    const url = `https://resources.download.minecraft.net/${prefix}/${hash}`;
+    const url = `${cdn.URLS.assetObjectsBase}/${prefix}/${hash}`;
     tasks.push(async () => { await downloadFile(url, dest); });
   }
   if (tasks.length) {

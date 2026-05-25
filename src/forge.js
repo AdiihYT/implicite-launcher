@@ -14,10 +14,10 @@ const path = require('path');
 const { downloadFile } = require('./downloader');
 const logger = require('./logger');
 const zip = require('./zip');
+const cdn = require('./cdn');
 
 const FORGE_VERSION = '1.8.9-11.15.1.2318-1.8.9';
-const FORGE_INSTALLER_URL =
-  `https://maven.minecraftforge.net/net/minecraftforge/forge/${FORGE_VERSION}/forge-${FORGE_VERSION}-installer.jar`;
+const FORGE_INSTALLER_URL = cdn.URLS.forgeInstaller;
 
 // (ZIP-műveletek cross-platform módon a `./zip` modulban — adm-zip alapon.)
 

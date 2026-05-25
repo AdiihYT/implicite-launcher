@@ -1,0 +1,102 @@
+{
+  "/Users/asziadi/Documents/Programming/implicite-launcher/preload.js": {
+    "mtime": 1779610024.3319645,
+    "ast_hash": "950da32ebfaf81f29c29a8bcdc2c9d67",
+    "semantic_hash": "950da32ebfaf81f29c29a8bcdc2c9d67"
+  },
+  "/Users/asziadi/Documents/Programming/implicite-launcher/defaults.json": {
+    "mtime": 1779525117.8671572,
+    "ast_hash": "e48a62e67ec4cd7737335f54a68544d9",
+    "semantic_hash": "e48a62e67ec4cd7737335f54a68544d9"
+  },
+  "/Users/asziadi/Documents/Programming/implicite-launcher/main.js": {
+    "mtime": 1779610017.1891978,
+    "ast_hash": "604d618413d1deafe80abe6606c87c3c",
+    "semantic_hash": "604d618413d1deafe80abe6606c87c3c"
+  },
+  "/Users/asziadi/Documents/Programming/implicite-launcher/package.json": {
+    "mtime": 1779610363.3733482,
+    "ast_hash": "36761b1ae87185682b58d1cc0020503d",
+    "semantic_hash": "36761b1ae87185682b58d1cc0020503d"
+  },
+  "/Users/asziadi/Documents/Programming/implicite-launcher/renderer/renderer.js": {
+    "mtime": 1779610144.3493586,
+    "ast_hash": "6c6b1f5105d998190daacdc383b25987",
+    "semantic_hash": "6c6b1f5105d998190daacdc383b25987"
+  },
+  "/Users/asziadi/Documents/Programming/implicite-launcher/tools/generate-defaults.js": {
+    "mtime": 1779525090.4514098,
+    "ast_hash": "9be268bece859c6c04ae78412ccb4354",
+    "semantic_hash": "9be268bece859c6c04ae78412ccb4354"
+  },
+  "/Users/asziadi/Documents/Programming/implicite-launcher/.claude/settings.json": {
+    "mtime": 1779717214.1917927,
+    "ast_hash": "87f0d903477984d0587a02f8fe185263",
+    "semantic_hash": "87f0d903477984d0587a02f8fe185263"
+  },
+  "/Users/asziadi/Documents/Programming/implicite-launcher/src/logger.js": {
+    "mtime": 1779547284.7021706,
+    "ast_hash": "ddd2eefd0ff61a1be335a23c66c6f444",
+    "semantic_hash": "ddd2eefd0ff61a1be335a23c66c6f444"
+  },
+  "/Users/asziadi/Documents/Programming/implicite-launcher/src/forge.js": {
+    "mtime": 1779547167.7253203,
+    "ast_hash": "2185bd026a70d32490a79973b3c5ca13",
+    "semantic_hash": "2185bd026a70d32490a79973b3c5ca13"
+  },
+  "/Users/asziadi/Documents/Programming/implicite-launcher/src/downloader.js": {
+    "mtime": 1779525551.5152266,
+    "ast_hash": "2c36f498d731f4127ebc44632e74d3c7",
+    "semantic_hash": "2c36f498d731f4127ebc44632e74d3c7"
+  },
+  "/Users/asziadi/Documents/Programming/implicite-launcher/src/lwjgl.js": {
+    "mtime": 1779525515.8840783,
+    "ast_hash": "8ec0a2656f018583dff7ca24b01a05e0",
+    "semantic_hash": "8ec0a2656f018583dff7ca24b01a05e0"
+  },
+  "/Users/asziadi/Documents/Programming/implicite-launcher/src/zip.js": {
+    "mtime": 1779547126.9007533,
+    "ast_hash": "cac0632fc8efbe228b90370c4fe92524",
+    "semantic_hash": "cac0632fc8efbe228b90370c4fe92524"
+  },
+  "/Users/asziadi/Documents/Programming/implicite-launcher/src/launcher.js": {
+    "mtime": 1779609975.037631,
+    "ast_hash": "3239b7fe27e6af349f87c63361f16481",
+    "semantic_hash": "3239b7fe27e6af349f87c63361f16481"
+  },
+  "/Users/asziadi/Documents/Programming/implicite-launcher/src/defaults.js": {
+    "mtime": 1779547196.6426501,
+    "ast_hash": "bfad7bde11f74c558ccfc36df05a607b",
+    "semantic_hash": "bfad7bde11f74c558ccfc36df05a607b"
+  },
+  "/Users/asziadi/Documents/Programming/implicite-launcher/README.md": {
+    "mtime": 1779698020.5533123,
+    "ast_hash": "a36efa5b75607f072c4fe675c296ef9b",
+    "semantic_hash": "a36efa5b75607f072c4fe675c296ef9b"
+  },
+  "/Users/asziadi/Documents/Programming/implicite-launcher/RELEASE.md": {
+    "mtime": 1779571099.856825,
+    "ast_hash": "8baaff51a144ff3880b32a999b039e3e",
+    "semantic_hash": "8baaff51a144ff3880b32a999b039e3e"
+  },
+  "/Users/asziadi/Documents/Programming/implicite-launcher/IMPLICITE_LAUNCHER.md": {
+    "mtime": 1779441050.8333683,
+    "ast_hash": "d4a28fb057be2f8987c750649930a87b",
+    "semantic_hash": "d4a28fb057be2f8987c750649930a87b"
+  },
+  "/Users/asziadi/Documents/Programming/implicite-launcher/CLAUDE.md": {
+    "mtime": 1779717214.1915877,
+    "ast_hash": "82efb97a359f5c7290bf2513d14686be",
+    "semantic_hash": "82efb97a359f5c7290bf2513d14686be"
+  },
+  "/Users/asziadi/Documents/Programming/implicite-launcher/renderer/index.html": {
+    "mtime": 1779610049.568072,
+    "ast_hash": "be11913e4ebdca290b8233cbc075fc5c",
+    "semantic_hash": "be11913e4ebdca290b8233cbc075fc5c"
+  },
+  "/Users/asziadi/Documents/Programming/implicite-launcher/renderer/bg.jpg": {
+    "mtime": 1779449719.3724473,
+    "ast_hash": "9670c53e4a838f70388e5845b39cbf21",
+    "semantic_hash": "9670c53e4a838f70388e5845b39cbf21"
+  }
+}

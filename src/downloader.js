@@ -4,6 +4,7 @@ const https = require('https');
 const http = require('http');
 const { URL } = require('url');
 const logger = require('./logger');
+const { rewriteUrl } = require('./cdn');
 
 const USER_AGENT = 'Implicite-Launcher/1.0';
 const MAX_REDIRECTS = 8;
@@ -157,15 +158,18 @@ function downloadFileOnce(url, dest, onProgress, redirects = 0) {
 }
 
 function fetchJSON(url) {
-  return withRetry(() => fetchJSONOnce(url), `fetchJSON ${url}`);
+  const target = rewriteUrl(url);
+  return withRetry(() => fetchJSONOnce(target), `fetchJSON ${target}`);
 }
 
 function fetchBuffer(url) {
-  return withRetry(() => fetchBufferOnce(url), `fetchBuffer ${url}`);
+  const target = rewriteUrl(url);
+  return withRetry(() => fetchBufferOnce(target), `fetchBuffer ${target}`);
 }
 
 function downloadFile(url, dest, onProgress) {
-  return withRetry(() => downloadFileOnce(url, dest, onProgress), `downloadFile ${url}`);
+  const target = rewriteUrl(url);
+  return withRetry(() => downloadFileOnce(target, dest, onProgress), `downloadFile ${target}`);
 }
 
 async function downloadConcurrent(tasks, concurrency = 16) {
