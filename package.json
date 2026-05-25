@@ -1,6 +1,6 @@
 {
   "name": "implicite-launcher",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "Implicite Minecraft Launcher",
   "main": "main.js",
   "scripts": {
