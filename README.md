@@ -22,16 +22,36 @@ On macOS the auto-updater is **disabled at runtime**. `electron-updater` require
 
 ## Table of Contents
 
-1. [Why this exists](#why-this-exists)
-2. [Architecture overview](#architecture-overview)
-3. [The launch pipeline, step by step](#the-launch-pipeline-step-by-step)
-4. [The Java problem — and why Zulu](#the-java-problem--and-why-zulu)
-5. [The LWJGL problem — and how it was solved](#the-lwjgl-problem--and-how-it-was-solved)
-6. [The Apple Silicon `useVbo` quirk](#the-apple-silicon-usevbo-quirk)
-7. [Mod whitelisting](#mod-whitelisting)
-8. [Settings and data layout](#settings-and-data-layout)
-9. [Security posture](#security-posture)
-10. [Build & run](#build--run)
+1. [Where the name comes from](#where-the-name-comes-from)
+2. [Why this exists](#why-this-exists)
+3. [Architecture overview](#architecture-overview)
+4. [The launch pipeline, step by step](#the-launch-pipeline-step-by-step)
+5. [The Java problem — and why Zulu](#the-java-problem--and-why-zulu)
+6. [The LWJGL problem — and how it was solved](#the-lwjgl-problem--and-how-it-was-solved)
+7. [The Apple Silicon `useVbo` quirk](#the-apple-silicon-usevbo-quirk)
+8. [Mod whitelisting](#mod-whitelisting)
+9. [Settings and data layout](#settings-and-data-layout)
+10. [Security posture](#security-posture)
+11. [Build & run](#build--run)
+
+---
+
+## Where the name comes from
+
+A bit of personal trivia, because every launcher named after something gets this question eventually.
+
+**Implicite** was a Hungarian Minecraft server network that ran up until around 2019. I played on it as a kid — I was about 14 at the time — and it left a real impression on me. It was primarily a **PVP-focused** network, and unlike most Hungarian servers of that era it shipped its **own custom client** years before having a custom client was a normal thing to do. The client supported both **1.7.10 and 1.8.9**, which back then was the gold standard for Minecraft PVP.
+
+Two things stuck with me about that client:
+
+- it was **rock-solid stable** and **absurdly fast** on the hardware of the day, and
+- every mod and tweak in it was tuned for one thing only: **the best possible PVP experience**. No fluff, no upsells, no store. Just FPS, gameplay feel, and zero friction between you and the game.
+
+Fast-forward to today: I switched to macOS years ago and barely touch Windows anymore. And on macOS, the state of "old-version Minecraft PVP clients" is genuinely bleak. **Lunar Client** is essentially the only one that runs stably on Apple Silicon — but Lunar has drifted a long way from what it used to be. It is now, frankly, much more of a **commercial product** than a PVP client: it wants to sell you capes, cosmetics, and a **Lunar+** subscription. The actual *PVP-client* part has become almost a vehicle for the storefront.
+
+That's the gap **Implicite Launcher** was built to fill, and that's why it's named after the server network whose client got this right in the first place: a launcher that focuses on the things that actually matter for old-version PVP — **stability, performance, simplicity** — and nothing else. No login, no store, no subscription, no cosmetics. Type a username, hit START, play.
+
+It is not affiliated with the original Implicite network (which has been offline for years); the name is a tribute.
 
 ---
 
