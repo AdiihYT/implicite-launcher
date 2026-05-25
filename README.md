@@ -1,8 +1,22 @@
 # Implicite Launcher
 
-A minimal, dependency-light Electron launcher for **Minecraft 1.8.9 + Forge**, built specifically to run cleanly on modern macOS — including Apple Silicon (M1/M2/M3) on macOS Tahoe — where the vanilla Mojang launcher and most third-party launchers crash on startup or during window resizing.
+A minimal, dependency-light Electron launcher for **Minecraft 1.8.9 + Forge**, built specifically to run cleanly on modern macOS — including Apple Silicon (M1/M2/M3) on macOS Tahoe — where the vanilla Mojang launcher and most third-party launchers crash on startup or during window resizing. The launcher also runs on **Windows 10 and Windows 11**, where the game has been stable across testing with no known issues so far.
 
 The launcher has no authentication: the user types a Minecraft username, hits **START**, and the launcher handles everything else (Java install, Forge installer extraction, library/asset downloads, native unpacking, mod whitelisting, and the actual `java` spawn).
+
+## Platform status
+
+| Platform              | Game launch                  | Stability                                                                 | Auto-updater |
+| --------------------- | ---------------------------- | ------------------------------------------------------------------------- | ------------ |
+| Windows 10 / 11       | Works without issue          | Stable — no known bugs                                                    | Yes          |
+| macOS (Intel)         | Works                        | Stable                                                                    | No (unsigned DMG) |
+| macOS (Apple Silicon) | Works                        | One outstanding issue: probabilistic window-resize crash in first ~10s    | No (unsigned DMG) |
+
+### Auto-updater
+
+The launcher ships with an auto-updater wired up through `electron-updater`. On Windows, releases are picked up automatically: the launcher checks for a newer published version on startup, downloads it in the background, and applies the update on next restart.
+
+On macOS the auto-updater is **disabled at runtime**. `electron-updater` requires the `.dmg` (and the embedded `.app`) to be signed with a valid Developer ID certificate and notarized by Apple — otherwise Gatekeeper refuses the staged update and the install silently fails (or worse, leaves a quarantined app bundle behind). Until the project is signed with a `.cer` (Apple Developer ID Application certificate) and a notarization round-trip is added to the build, macOS users have to download new builds manually.
 
 ---
 
@@ -183,6 +197,20 @@ The launcher rewrites the first byte from `0x2A` (`aload_0`) to `0xB1` (`return`
 
 The patch implementation is in [src/launcher.js](src/launcher.js#L333-L380): `unzip` extracts `MacOSXDisplay.class` to a temp directory, the buffer is scanned for the pattern, the byte is rewritten, and `zip` replaces the class inside the JAR in place. If the pattern is not found (i.e. a future LWJGL build that doesn't match), the launcher throws — better to fail loudly than to silently produce a broken installation.
 
+### Known outstanding issue — the macOS framebuffer / resize race
+
+Even with the `nSetResizable` no-op patch in place, **macOS Apple Silicon still has one unsolved crash**: a probabilistic SIGSEGV/SIGBUS in the first 5–10 seconds after the GL window is created, triggered by resizing or full-screening the window during that startup window. We don't currently have a fix and we don't yet know exactly which layer is at fault.
+
+What we have observed:
+
+- **It is a startup-window race, not a steady-state bug.** If the user makes it past roughly the first 5–10 seconds — i.e. through main-menu render, into a world, with at least one resize survived — the session is stable. From that point on, resize and fullscreen can be toggled freely with no further crashes for the rest of the session. The bug does **not** reproduce mid-game.
+- **The crash signature is not the old AppKit `NSException`/`SIGABRT`.** Patching out `nSetResizable` removed the deterministic `setStyleMask:` crash documented above. What's left is a different failure mode: the JVM hard-crashes with `SIGSEGV` inside `liblwjgl.dylib` or in `AppleMetalOpenGLRenderer`, with no Java stack trace, and `game.log` typically shows a partial GL initialization (`Framebuffer` / `OpenGlHelper` lines) cut off mid-write.
+- **Working hypothesis.** Minecraft 1.8.9's `Framebuffer` is recreated whenever the GL viewport changes. On macOS arm64, GL calls are translated to Metal under the hood by `AppleMetalOpenGLRenderer`, and the GL context isn't fully "live" until the first frame has actually been presented. A resize during that warm-up window seems to drive `glFramebufferTexture2D` / `glCheckFramebufferStatus` against a Metal-backed FBO that hasn't been fully promoted yet, which the GL→Metal shim doesn't survive. We have not been able to definitively pin the crash to either the Tanmay-patched `liblwjgl.dylib` (LWJGL's CGL/AppKit glue) or to Apple's GL-on-Metal translation layer — both are plausible, and the crash signature is too sparse to disambiguate from the dump alone.
+- **`useVbo:true` does not fix it.** The VBO option (see next section) eliminates a separate immediate-mode segfault but does nothing for this one; the framebuffer rebuild path is the same either way.
+- **Workarounds considered.** Blocking input during the first N seconds (preventing the user from resizing at all) is a UX regression and only papers over the bug. Forcing a fixed window size from the JVM side is exactly what `nSetResizable` was patched to avoid touching. Forcing software GL via `LIBGL_ALWAYS_SOFTWARE`-equivalents is not really an option on macOS. Rebuilding `liblwjgl.dylib` to defer `Display.update` until the first present remains the cleanest theoretical fix, but it lands us back in fork-and-maintain-the-native territory.
+
+For now the practical advice baked into the UI is just: **start the game, wait until you're at the main menu, then resize freely**. If the launcher survives the first ~10 seconds, the rest of the session is reliable. This is the one known bug on Apple Silicon, and we don't have a fix planned yet.
+
 ---
 
 ## The Apple Silicon `useVbo` quirk
@@ -250,9 +278,11 @@ All state lives under macOS's standard Application Support location:
 ```
 npm install
 npm start              # launch Electron in dev
-npm run build          # electron-builder --mac, produces a .dmg
+npm run build          # electron-builder, produces a .dmg (macOS) or NSIS installer (Windows)
 ```
 
-Runtime requirements: macOS (Intel or Apple Silicon). The launcher will download Java 8 (Zulu) on first run; no system Java install is needed.
+Runtime requirements: macOS (Intel or Apple Silicon) or Windows 10 / 11. The launcher will download Java 8 (Zulu) on first run; no system Java install is needed.
 
-The launcher targets **macOS** primarily — Windows and Linux paths exist in the code (vanilla LWJGL natives are extracted normally on those platforms) but the resize/Apple Silicon work is the main thing this project is about, and macOS is what gets tested.
+**Windows** is fully supported and currently the most stable target: the game launches without issue, vanilla LWJGL natives are extracted the normal way (none of the Apple Silicon LWJGL/dylib gymnastics apply), and the auto-updater is wired up end-to-end via `electron-updater`.
+
+**macOS** is where the project started and where most of the engineering effort went — the Apple Silicon LWJGL swap, the `setResizable` bytecode patch, and the `useVbo` quirk are all macOS-only code paths. macOS builds are unsigned today, which means the auto-updater is disabled there until a Developer ID certificate (`.cer`) and notarization are added to the build pipeline.
